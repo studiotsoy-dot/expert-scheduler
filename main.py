@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -17,7 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Простая база данных в памяти (для теста)
+# Простая база данных в памяти
 DATABASE = {
     "users": {},
     "slots": {},
@@ -172,9 +172,14 @@ def get_bookings(role: str, user_id: str):
         })
     return result
 
+# Отдаём index.html при заходе на корень
 @app.get("/")
 def root():
-    return {"message": "Expert Scheduler API is running"}
+    return FileResponse("index.html")
+
+@app.get("/index.html")
+def index():
+    return FileResponse("index.html")
 
 if __name__ == "__main__":
     import uvicorn
