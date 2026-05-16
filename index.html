@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expert Scheduler</title>
+    <title>Expert Scheduler CRM</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -13,7 +13,7 @@
             padding: 20px;
             color: #f1f5f9;
         }
-        .container { max-width: 1400px; margin: 0 auto; }
+        .container { max-width: 1600px; margin: 0 auto; }
         .header {
             background: rgba(255,255,255,0.05);
             backdrop-filter: blur(10px);
@@ -48,26 +48,7 @@
             padding: 1.5rem;
             border: 1px solid rgba(255,255,255,0.05);
         }
-        .slots-grid, .bookings-list, .users-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        .slot-card, .booking-card, .user-card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 1rem;
-            padding: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        .slot-card-details, .user-details {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
+        .form-group { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
         button {
             background: #2dd4bf;
             border: none;
@@ -76,41 +57,102 @@
             cursor: pointer;
             font-weight: bold;
             color: #0f172a;
+            transition: all 0.2s;
         }
+        button:hover { opacity: 0.8; transform: translateY(-1px); }
         button.danger { background: #ef4444; color: white; }
         button.success { background: #10b981; color: white; }
         button.warning { background: #f59e0b; color: white; }
         button.secondary { background: #475569; color: white; }
-        select, input {
+        button.info { background: #3b82f6; color: white; }
+        select, input, textarea {
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.2);
             padding: 0.5rem;
             border-radius: 0.5rem;
             color: white;
         }
-        .form-group { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
-        .zoom-link { font-size: 0.8rem; color: #38bdf8; word-break: break-all; }
-        .status { padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.8rem; display: inline-block; }
-        .status.pending { background: #f59e0b; }
-        .status.confirmed { background: #10b981; }
-        .status.free { background: #3b82f6; }
-        .status.booked { background: #8b5cf6; }
+        textarea { font-family: inherit; resize: vertical; }
+        .zoom-link { font-size: 0.75rem; color: #38bdf8; word-break: break-all; }
+        .status { padding: 0.2rem 0.6rem; border-radius: 1rem; font-size: 0.7rem; display: inline-block; font-weight: bold; }
+        .status-pending { background: #f59e0b; color: #1a1a2e; }
+        .status-confirmed { background: #10b981; color: white; }
+        .status-success { background: #06b6d4; color: white; }
+        .status-cancelled_by_client { background: #ef4444; color: white; }
+        .status-cancelled_by_expert { background: #f97316; color: white; }
+        .status-failed { background: #7c3aed; color: white; }
+        .status-reschedule_request { background: #ec4899; color: white; }
         h2 { font-size: 1.3rem; margin: 0 0 1rem 0; }
-        h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem 0; color: #94a3b8; }
         hr { border-color: rgba(255,255,255,0.1); margin: 1rem 0; }
-        .filter-bar { margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
+        .filter-bar { margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; flex-wrap: wrap; }
         .tab { padding: 0.5rem 1rem; cursor: pointer; border-radius: 0.5rem; }
         .tab.active { background: rgba(45,212,191,0.2); color: #2dd4bf; }
         .badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 1rem; background: rgba(255,255,255,0.1); }
         .user-active { color: #10b981; }
         .user-inactive { color: #ef4444; }
+        
+        /* Таблицы */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 0.75rem 0.5rem;
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        .data-table td {
+            padding: 0.6rem 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            vertical-align: middle;
+        }
+        .data-table tr:hover { background: rgba(255,255,255,0.03); }
+        .text-muted { color: #94a3b8; font-size: 0.75rem; }
+        
+        /* Анимация для новых изменений */
+        @keyframes highlight {
+            0% { background: rgba(45,212,191,0.4); }
+            100% { background: transparent; }
+        }
+        .highlight-row {
+            animation: highlight 2s ease-out;
+        }
+        
+        /* Пользователи грид */
+        .users-table {
+            display: grid;
+            grid-template-columns: 1.5fr 1.5fr 0.8fr 0.8fr 1.2fr 0.8fr;
+            gap: 0.5rem;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .users-header {
+            background: rgba(255,255,255,0.05);
+            border-radius: 0.5rem;
+            font-weight: bold;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+        .comment-preview {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>📅 Expert Scheduler — Система управления расписанием</h1>
+        <h1>📅 Expert Scheduler CRM</h1>
         <div class="role-selector">
             <div class="role-btn" data-role="manager">📋 Менеджер</div>
             <div class="role-btn" data-role="expert">🎯 Эксперт</div>
@@ -135,6 +177,33 @@
     let currentUser = null;
     let currentRole = 'manager';
     let adminActiveTab = 'slots';
+    let statusNames = {};
+    let lastSeenStatuses = {}; // Для отслеживания изменений статусов
+    
+    async function loadStatuses() {
+        try {
+            const res = await fetch(`${API_URL}/api/bookings/statuses`);
+            const data = await res.json();
+            statusNames = data.names;
+        } catch(e) { console.error(e); }
+    }
+    
+    function getStatusClass(status) {
+        const classes = {
+            'pending': 'status-pending',
+            'confirmed': 'status-confirmed',
+            'success': 'status-success',
+            'cancelled_by_client': 'status-cancelled_by_client',
+            'cancelled_by_expert': 'status-cancelled_by_expert',
+            'failed': 'status-failed',
+            'reschedule_request': 'status-reschedule_request'
+        };
+        return classes[status] || 'status-pending';
+    }
+    
+    function getStatusName(status) {
+        return statusNames[status] || status;
+    }
     
     function loadFromStorage() {
         const saved = localStorage.getItem('expert_scheduler_user');
@@ -230,6 +299,7 @@
     
     async function loadDashboard() {
         if (!currentUser) return;
+        await loadStatuses();
         
         if (currentUser.role === 'manager') {
             await loadManagerView();
@@ -240,49 +310,69 @@
         }
     }
     
+    // ========== МЕНЕДЖЕР ==========
     async function loadManagerView() {
         const slotsRes = await fetch(`${API_URL}/api/slots/free`);
         const freeSlots = await slotsRes.json();
         
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=manager&user_id=${currentUser.id}`);
-        const myBookings = await bookingsRes.json();
+        let myBookings = await bookingsRes.json();
         
-        let html = `<h2>📅 Свободные слоты для записи</h2><div class="slots-grid">`;
+        let html = `<h2>📅 Свободные слоты</h2>`;
         if (freeSlots.length === 0) html += `<p>Нет свободных слотов</p>`;
-        freeSlots.forEach(slot => {
-            html += `
-                <div class="slot-card">
-                    <div class="slot-card-details">
-                        <strong>${slot.expert_name}</strong><br>
-                        📆 ${slot.date} | ⏰ ${slot.start_time} - ${slot.end_time}
-                    </div>
-                    <button onclick="bookSlot('${slot.id}')">📝 Записать клиента</button>
-                </div>
-            `;
-        });
-        html += `</div><hr><h2>📋 Мои записи (клиенты)</h2><div class="bookings-list">`;
+        else {
+            html += `<table class="data-table"><thead><tr><th>Эксперт</th><th>Дата</th><th>Время</th><th></th></tr></thead><tbody>`;
+            freeSlots.forEach(slot => {
+                html += `<tr>
+                    <td><strong>${slot.expert_name}</strong></td>
+                    <td>${slot.date}</td>
+                    <td>${slot.start_time} - ${slot.end_time}</td>
+                    <td><button onclick="bookSlot('${slot.id}')">📝 Записать</button></td>
+                </tr>`;
+            });
+            html += `</tbody></table>`;
+        }
+        
+        html += `<hr><h2>📋 Мои записи</h2>`;
         if (myBookings.length === 0) html += `<p>Нет записей</p>`;
-        myBookings.forEach(b => {
-            html += `
-                <div class="booking-card">
-                    <div class="slot-card-details">
-                        <strong>${b.client_name}</strong> → ${b.expert_name}<br>
-                        📆 ${b.date} ${b.start_time}<br>
-                        Статус: <span class="status ${b.status}">${b.status}</span><br>
-                        <div class="zoom-link">🔗 ${b.zoom_link}</div>
-                    </div>
-                </div>
-            `;
-        });
-        html += `</div>`;
+        else {
+            html += `<table class="data-table" id="manager-bookings-table"><thead><tr>
+                <th>Клиент</th><th>Email</th><th>Телефон</th><th>Эксперт</th><th>Дата/Время</th><th>Статус созвона</th><th>Комментарий</th><th>Zoom</th><th></th>
+            </tr></thead><tbody>`;
+            myBookings.forEach(b => {
+                const isNew = lastSeenStatuses[b.id] !== b.call_status;
+                const rowClass = isNew ? 'highlight-row' : '';
+                html += `<tr id="booking-row-${b.id}" class="${rowClass}">
+                    <td><strong>${b.client_name}</strong></td>
+                    <td>${b.client_email || '—'}</td>
+                    <td>${b.client_phone || '—'}</td>
+                    <td>${b.expert_name}</td>
+                    <td>${b.date} ${b.start_time}</td>
+                    <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td>
+                    <td><span class="comment-preview">${b.call_comment || '—'}</span></td>
+                    <td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td>
+                    <td>${b.call_status === 'reschedule_request' ? `<button class="info" onclick="rescheduleBooking('${b.id}')">🔄 Переназначить</button>` : ''}</td>
+                </tr>`;
+                lastSeenStatuses[b.id] = b.call_status;
+            });
+            html += `</tbody></table>`;
+        }
         dashboardDiv.innerHTML = html;
+        
+        // Убираем подсветку через 3 секунды
+        setTimeout(() => {
+            myBookings.forEach(b => {
+                const row = document.getElementById(`booking-row-${b.id}`);
+                if (row) row.classList.remove('highlight-row');
+            });
+        }, 3000);
     }
     
     window.bookSlot = async (slotId) => {
         const clientName = prompt("Введите ФИО клиента:");
         if (!clientName) return;
-        const clientPhone = prompt("Введите телефон клиента (опционально):");
-        const clientEmail = prompt("Введите email клиента (опционально):");
+        const clientPhone = prompt("Введите телефон клиента:");
+        const clientEmail = prompt("Введите email клиента:");
         
         const response = await fetch(`${API_URL}/api/bookings`, {
             method: 'POST',
@@ -297,59 +387,103 @@
         });
         
         if (response.ok) {
-            alert("Клиент успешно записан! Ссылка Zoom сгенерирована.");
+            alert("Клиент успешно записан!");
             loadDashboard();
         } else {
             alert("Ошибка записи. Возможно, слот уже занят.");
         }
     };
     
+    window.rescheduleBooking = async (bookingId) => {
+        const newDate = prompt("Введите новую дату (ГГГГ-ММ-ДД):");
+        if (!newDate) return;
+        const newTime = prompt("Введите новое время начала (ЧЧ:ММ):");
+        if (!newTime) return;
+        const endTime = prompt("Введите новое время окончания (ЧЧ:ММ):");
+        if (!endTime) return;
+        
+        const response = await fetch(`${API_URL}/api/bookings/reschedule`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking_id: bookingId,
+                manager_id: currentUser.id,
+                new_date: newDate,
+                new_start_time: newTime,
+                new_end_time: endTime
+            })
+        });
+        
+        if (response.ok) {
+            alert("Время успешно переназначено!");
+            loadDashboard();
+        } else {
+            alert("Ошибка переназначения");
+        }
+    };
+    
+    // ========== ЭКСПЕРТ ==========
     async function loadExpertView() {
         const slotsRes = await fetch(`${API_URL}/api/slots?expert_id=${currentUser.id}`);
         let mySlots = await slotsRes.json();
         
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=expert&user_id=${currentUser.id}`);
-        const myBookings = await bookingsRes.json();
+        let myBookings = await bookingsRes.json();
         
         let html = `
-            <h2>🕐 Мои слоты (расписание)</h2>
+            <h2>🕐 Мои слоты</h2>
             <div class="form-group">
-                <input type="date" id="new-slot-date" placeholder="Дата">
-                <input type="time" id="new-slot-start" placeholder="Начало">
-                <input type="time" id="new-slot-end" placeholder="Конец">
+                <input type="date" id="new-slot-date">
+                <input type="time" id="new-slot-start">
+                <input type="time" id="new-slot-end">
                 <button onclick="createSlot()">➕ Добавить слот</button>
             </div>
-            <div class="slots-grid">
-        `;
-        if (mySlots.length === 0) html += `<p>У вас нет созданных слотов</p>`;
+            <table class="data-table"><thead><tr><th>Дата</th><th>Время</th><th>Статус</th></tr></thead><tbody>`;
+        if (mySlots.length === 0) html += `<tr><td colspan="3">Нет слотов</td></tr>`;
         mySlots.forEach(slot => {
-            html += `
-                <div class="slot-card">
-                    <div class="slot-card-details">
-                        📆 ${slot.date} | ⏰ ${slot.start_time} - ${slot.end_time}
-                        Статус: <span class="status ${slot.status}">${slot.status}</span>
-                    </div>
-                </div>
-            `;
+            html += `<tr>
+                <td>${slot.date}</td>
+                <td>${slot.start_time} - ${slot.end_time}</td>
+                <td><span class="status ${getStatusClass(slot.status)}">${slot.status}</span></td>
+            </tr>`;
         });
-        html += `</div><hr><h2>📋 Записи клиентов на мои слоты</h2><div class="bookings-list">`;
+        html += `</tbody></table>`;
+        
+        html += `<hr><h2>📋 Записи клиентов</h2>`;
         if (myBookings.length === 0) html += `<p>Нет записей</p>`;
-        myBookings.forEach(b => {
-            html += `
-                <div class="booking-card">
-                    <div class="slot-card-details">
-                        <strong>${b.client_name}</strong> (тел: ${b.client_phone || 'не указан'})<br>
-                        📆 ${b.date} ${b.start_time}<br>
-                        👤 Менеджер: ${b.manager_name || 'неизвестен'}<br>
-                        Статус: <span class="status ${b.status}">${b.status}</span><br>
-                        <div class="zoom-link">🔗 ${b.zoom_link}</div>
-                    </div>
-                    ${b.status === 'pending' ? `<button class="success" onclick="confirmBooking('${b.id}')">✅ Подтвердить запись</button>` : ''}
-                </div>
-            `;
-        });
-        html += `</div>`;
+        else {
+            html += `<table class="data-table"><thead><tr>
+                <th>Клиент</th><th>Телефон</th><th>Email</th><th>Дата/Время</th><th>Менеджер</th><th>Статус</th><th>Комментарий</th><th>Действие</th>
+            </tr></thead><tbody>`;
+            myBookings.forEach(b => {
+                html += `<tr id="expert-booking-${b.id}">
+                    <td><strong>${b.client_name}</strong></td>
+                    <td>${b.client_phone || '—'}</td>
+                    <td>${b.client_email || '—'}</td>
+                    <td>${b.date} ${b.start_time}</td>
+                    <td>${b.manager_name || '—'}</td>
+                    <td><span class="status ${getStatusClass(b.call_status)}" id="status-badge-${b.id}">${getStatusName(b.call_status)}</span></td>
+                    <td><span id="comment-display-${b.id}">${b.call_comment || '—'}</span></td>
+                    <td>
+                        <select id="status-select-${b.id}" class="status-select">
+                            <option value="pending" ${b.call_status === 'pending' ? 'selected' : ''}>⏳ Ожидает</option>
+                            <option value="confirmed" ${b.call_status === 'confirmed' ? 'selected' : ''}>✅ Подтверждён</option>
+                            <option value="success" ${b.call_status === 'success' ? 'selected' : ''}>🎉 Созвон успешный</option>
+                            <option value="cancelled_by_client" ${b.call_status === 'cancelled_by_client' ? 'selected' : ''}>❌ Отменён клиентом</option>
+                            <option value="cancelled_by_expert" ${b.call_status === 'cancelled_by_expert' ? 'selected' : ''}>⚠️ Отменён экспертом</option>
+                            <option value="failed" ${b.call_status === 'failed' ? 'selected' : ''}>💔 Созвон не успешный</option>
+                            <option value="reschedule_request" ${b.call_status === 'reschedule_request' ? 'selected' : ''}>🔄 Клиент просил перенести</option>
+                        </select>
+                    </td>
+                </tr>`;
+            });
+            html += `</tbody></table>`;
+            html += `<div class="form-group" style="margin-top: 1rem;"><button onclick="saveAllStatuses()">💾 Сохранить все изменения статусов</button></div>`;
+        }
         dashboardDiv.innerHTML = html;
+        
+        // Сохраняем исходные статусы
+        window.expertBookingsData = myBookings;
     }
     
     window.createSlot = async () => {
@@ -381,33 +515,44 @@
         }
     };
     
-    window.confirmBooking = async (bookingId) => {
-        const response = await fetch(`${API_URL}/api/bookings/confirm`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                booking_id: bookingId,
-                expert_id: currentUser.id
-            })
-        });
+    window.saveAllStatuses = async () => {
+        if (!window.expertBookingsData) return;
         
-        if (response.ok) {
-            alert("Запись подтверждена!");
-            loadDashboard();
-        } else {
-            alert("Ошибка подтверждения");
+        for (const booking of window.expertBookingsData) {
+            const select = document.getElementById(`status-select-${booking.id}`);
+            if (!select) continue;
+            const newStatus = select.value;
+            if (newStatus === booking.call_status) continue;
+            
+            const comment = prompt(`Введите комментарий для статуса "${getStatusName(newStatus)}":`, booking.call_comment || "");
+            
+            const response = await fetch(`${API_URL}/api/bookings/update-status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking_id: booking.id,
+                    expert_id: currentUser.id,
+                    status: newStatus,
+                    comment: comment || ""
+                })
+            });
+            
+            if (response.ok) {
+                console.log(`Статус для ${booking.client_name} обновлён`);
+            }
         }
+        alert("Статусы сохранены!");
+        loadDashboard();
     };
     
-    // ========== АДМИН-ПАНЕЛЬ С УПРАВЛЕНИЕМ ПОЛЬЗОВАТЕЛЯМИ ==========
-    
+    // ========== АДМИН ==========
     async function loadAdminView() {
         let html = `
             <h2>👑 Административная панель</h2>
             <div class="tabs">
                 <div class="tab ${adminActiveTab === 'slots' ? 'active' : ''}" onclick="switchAdminTab('slots')">📅 Слоты экспертов</div>
                 <div class="tab ${adminActiveTab === 'bookings' ? 'active' : ''}" onclick="switchAdminTab('bookings')">📋 Все записи</div>
-                <div class="tab ${adminActiveTab === 'users' ? 'active' : ''}" onclick="switchAdminTab('users')">👥 Управление пользователями</div>
+                <div class="tab ${adminActiveTab === 'users' ? 'active' : ''}" onclick="switchAdminTab('users')">👥 Пользователи</div>
             </div>
             <div id="admin-tab-content"></div>
         `;
@@ -433,41 +578,46 @@
         
         let html = `
             <div class="filter-bar">
-                <label>👨‍🏫 Фильтр по эксперту:</label>
+                <label>👨‍🏫 Фильтр:</label>
                 <select id="expert-filter">
                     <option value="all">Все эксперты</option>
-                    ${experts.map(e => `<option value="${e.id}">${e.name} (${e.email})</option>`).join('')}
+                    ${experts.map(e => `<option value="${e.id}">${e.name}</option>`).join('')}
                 </select>
-                <button onclick="filterSlots()">Применить фильтр</button>
+                <button onclick="filterSlots()">🔍 Применить</button>
             </div>
-            <div class="slots-grid" id="slots-container">
+            <table class="data-table">
+                <thead><tr><th>Эксперт</th><th>Дата</th><th>Время</th><th>Статус</th><th>Клиент</th><th>Телефон</th><th>Email</th><th>Статус созвона</th><th>Комментарий</th><th>Менеджер</th><th>Zoom</th></tr></thead>
+                <tbody id="slots-tbody"></tbody>
+            </table>
         `;
-        
-        window.adminSlotsData = allSlots;
-        html += `<div id="slots-list">${renderSlotsList(allSlots)}</div>`;
-        html += `</div>`;
         document.getElementById('admin-tab-content').innerHTML = html;
+        window.adminSlotsData = allSlots;
+        renderSlotsTable(allSlots);
     }
     
-    function renderSlotsList(slots) {
-        if (slots.length === 0) return `<p>Нет слотов</p>`;
-        return slots.map(slot => `
-            <div class="slot-card">
-                <div class="slot-card-details">
-                    <strong>${slot.expert_name}</strong> (${slot.expert_email})<br>
-                    📆 ${slot.date} | ⏰ ${slot.start_time} - ${slot.end_time}<br>
-                    Статус: <span class="status ${slot.status}">${slot.status}</span>
-                    ${slot.booking ? `
-                        <br><br>
-                        <strong>📌 Запись клиента:</strong><br>
-                        👤 Клиент: ${slot.booking.client_name}<br>
-                        📞 Телефон: ${slot.booking.client_phone || 'не указан'}<br>
-                        📧 Email клиента: ${slot.booking.client_email || 'не указан'}<br>
-                        👨‍💼 Менеджер: ${slot.booking.manager_name}<br>
-                        🔗 <a href="${slot.booking.zoom_link}" target="_blank">Zoom ссылка</a>
-                    ` : ''}
-                </div>
-            </div>
+    function renderSlotsTable(slots) {
+        const tbody = document.getElementById('slots-tbody');
+        if (!tbody) return;
+        if (slots.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="11">Нет слотов</td></tr>';
+            return;
+        }
+        tbody.innerHTML = slots.map(slot => `
+            <tr>
+                <td><strong>${slot.expert_name}</strong><br><span class="text-muted">${slot.expert_email}</span></td>
+                <td>${slot.date}</td>
+                <td>${slot.start_time} - ${slot.end_time}</td>
+                <td><span class="status ${getStatusClass(slot.status)}">${slot.status}</span></td>
+                ${slot.booking ? `
+                    <td>${slot.booking.client_name}</td>
+                    <td>${slot.booking.client_phone || '—'}</td>
+                    <td>${slot.booking.client_email || '—'}</td>
+                    <td><span class="status ${getStatusClass(slot.booking.call_status)}">${getStatusName(slot.booking.call_status)}</span></td>
+                    <td><span class="comment-preview">${slot.booking.call_comment || '—'}</span></td>
+                    <td>${slot.booking.manager_name || '—'}</td>
+                    <td><a href="${slot.booking.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td>
+                ` : '<td colspan="7" class="text-muted">— свободен —</td>'}
+            </tr>
         `).join('');
     }
     
@@ -475,31 +625,31 @@
         const expertId = document.getElementById('expert-filter').value;
         const slots = window.adminSlotsData || [];
         const filtered = expertId === 'all' ? slots : slots.filter(s => s.expert_id === expertId);
-        document.getElementById('slots-list').innerHTML = renderSlotsList(filtered);
+        renderSlotsTable(filtered);
     };
     
     async function renderAdminBookings() {
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=admin&user_id=${currentUser.id}`);
         const allBookings = await bookingsRes.json();
         
-        let html = `<div class="bookings-list">`;
-        if (allBookings.length === 0) html += `<p>Нет записей</p>`;
+        let html = `<table class="data-table">
+            <thead><tr><th>Клиент</th><th>Email</th><th>Телефон</th><th>Эксперт</th><th>Дата/Время</th><th>Менеджер</th><th>Статус созвона</th><th>Комментарий</th><th>Zoom</th></tr></thead>
+            <tbody>`;
+        if (allBookings.length === 0) html += `<tr><td colspan="9">Нет записей</td></tr>`;
         allBookings.forEach(b => {
-            html += `
-                <div class="booking-card">
-                    <div class="slot-card-details">
-                        <strong>${b.client_name}</strong> → ${b.expert_name}<br>
-                        📆 ${b.date} ${b.start_time}<br>
-                        👤 Менеджер: ${b.manager_name}<br>
-                        📞 Телефон клиента: ${b.client_phone || 'не указан'}<br>
-                        📧 Email клиента: ${b.client_email || 'не указан'}<br>
-                        Статус: <span class="status ${b.status}">${b.status}</span><br>
-                        <div class="zoom-link">🔗 ${b.zoom_link}</div>
-                    </div>
-                </div>
-            `;
+            html += `<tr>
+                <td><strong>${b.client_name}</strong></td>
+                <td>${b.client_email || '—'}</td>
+                <td>${b.client_phone || '—'}</td>
+                <td>${b.expert_name}</td>
+                <td>${b.date} ${b.start_time}</td>
+                <td>${b.manager_name || '—'}</td>
+                <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td>
+                <td><span class="comment-preview">${b.call_comment || '—'}</span></td>
+                <td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td>
+            </tr>`;
         });
-        html += `</div>`;
+        html += `</tbody></table>`;
         document.getElementById('admin-tab-content').innerHTML = html;
     }
     
@@ -508,16 +658,21 @@
         let allUsers = await usersRes.json();
         
         let html = `
-            <div class="users-list">
-                <div style="display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1.5fr 1fr; gap: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem; font-weight: bold;">
+            <div style="background: rgba(255,255,255,0.05); border-radius: 0.75rem; overflow-x: auto;">
+                <div class="users-header users-table">
                     <div>Имя</div><div>Email</div><div>Роль</div><div>Статус</div><div>Действия</div><div>Удалить</div>
                 </div>
+                <div id="users-list"></div>
+            </div>
+            <p class="text-muted" style="margin-top: 1rem;">⚠️ Нельзя удалить или изменить роль последнего администратора.</p>
         `;
+        document.getElementById('admin-tab-content').innerHTML = html;
         
-        allUsers.forEach(user => {
+        const container = document.getElementById('users-list');
+        container.innerHTML = allUsers.map(user => {
             const isActive = user.is_active !== false;
-            html += `
-                <div class="user-card" style="display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1.5fr 1fr; gap: 0.5rem; align-items: center;">
+            return `
+                <div class="users-table" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <div>${escapeHtml(user.name)}</div>
                     <div>${escapeHtml(user.email)}</div>
                     <div>
@@ -529,30 +684,19 @@
                     </div>
                     <div class="${isActive ? 'user-active' : 'user-inactive'}">${isActive ? 'Активен' : 'Заблокирован'}</div>
                     <div>
-                        <button class="secondary" onclick="updateUser('${user.id}', '${user.role === 'admin' ? 'admin' : user.role}')" style="margin-right: 0.5rem;">💾 Сохранить</button>
-                        <button class="warning" onclick="toggleBlockUser('${user.id}', ${!isActive})">${isActive ? '🔒 Заблокировать' : '🔓 Разблокировать'}</button>
+                        <button class="secondary" onclick="updateUser('${user.id}')">💾 Сохранить</button>
+                        <button class="warning" onclick="toggleBlockUser('${user.id}', ${!isActive})">${isActive ? '🔒 Блок' : '🔓 Разблок'}</button>
                     </div>
-                    <div>
-                        ${user.id !== currentUser.id ? `<button class="danger" onclick="deleteUser('${user.id}', '${user.role}')">🗑 Удалить</button>` : '<span class="badge">Вы</span>'}
-                    </div>
+                    <div>${user.id !== currentUser.id ? `<button class="danger" onclick="deleteUser('${user.id}')">🗑 Удалить</button>` : '<span class="badge">Вы</span>'}</div>
                 </div>
             `;
-        });
-        
-        html += `</div><p class="badge" style="margin-top: 1rem;">⚠️ Изменение роли последнего администратора недоступно для защиты системы.</p>`;
-        document.getElementById('admin-tab-content').innerHTML = html;
+        }).join('');
     }
     
-    window.updateUser = async (userId, currentRole) => {
+    window.updateUser = async (userId) => {
         const select = document.querySelector(`.role-select-${userId}`);
         if (!select) return;
         const newRole = select.value;
-        
-        if (newRole === currentRole) {
-            alert("Роль не изменена");
-            return;
-        }
-        
         if (!confirm(`Изменить роль пользователя на "${newRole}"?`)) return;
         
         const response = await fetch(`${API_URL}/api/users`, {
@@ -566,7 +710,7 @@
             renderAdminUsers();
         } else {
             const error = await response.json();
-            alert(error.detail || "Ошибка обновления роли");
+            alert(error.detail || "Ошибка");
         }
     };
     
@@ -589,8 +733,8 @@
         }
     };
     
-    window.deleteUser = async (userId, role) => {
-        if (!confirm(`Удалить пользователя? Все его слоты (если эксперт) будут удалены.`)) return;
+    window.deleteUser = async (userId) => {
+        if (!confirm(`Удалить пользователя? Все его слоты будут удалены.`)) return;
         
         const response = await fetch(`${API_URL}/api/users/${userId}`, {
             method: 'DELETE'
