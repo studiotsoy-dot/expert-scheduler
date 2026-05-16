@@ -74,6 +74,7 @@
         }
         button.danger { background: #ef4444; color: white; }
         button.success { background: #10b981; color: white; }
+        button.warning { background: #f59e0b; color: white; }
         input, select {
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.2);
@@ -90,6 +91,7 @@
         .status.booked { background: #8b5cf6; }
         h2 { font-size: 1.3rem; margin: 0 0 1rem 0; }
         hr { border-color: rgba(255,255,255,0.1); margin: 1rem 0; }
+        .error { color: #ef4444; font-size: 0.8rem; margin-top: 0.5rem; }
     </style>
 </head>
 <body>
@@ -102,29 +104,57 @@
             <div class="role-btn" data-role="admin">👑 Администратор</div>
         </div>
         <div class="form-group" id="user-info" style="margin-top: 1rem;">
-            <input type="text" id="user-name" placeholder="Ваше имя" value="Тестовый Пользователь">
-            <input type="email" id="user-email" placeholder="Email" value="test@example.com">
+            <input type="text" id="user-name" placeholder="Ваше имя">
+            <input type="email" id="user-email" placeholder="Email">
             <button id="register-btn">Зарегистрироваться / Войти</button>
         </div>
         <div id="current-user" style="margin-top: 0.5rem; font-size: 0.9rem; color: #94a3b8;"></div>
     </div>
 
     <div class="dashboard" id="dashboard">
-        <!-- Содержимое будет меняться в зависимости от роли -->
         <div style="text-align: center; padding: 3rem;">Выберите роль и зарегистрируйтесь</div>
     </div>
 </div>
 
 <script>
-    let API_URL = window.location.origin;
-    if (window.location.href.includes('localhost') || window.location.href.includes('127.0.0.1')) {
-        API_URL = 'http://localhost:8000';
-    }
+    const API_URL = window.location.origin;
     
+    // Сохраняем пользователя в localStorage, чтобы не выкидывало при обновлении
     let currentUser = null;
     let currentRole = 'manager';
     
-    // DOM элементы
+    function loadFromStorage() {
+        const saved = localStorage.getItem('expert_scheduler_user');
+        if (saved) {
+            try {
+                const user = JSON.parse(saved);
+                currentUser = user;
+                currentRole = user.role;
+                document.getElementById('current-user').innerHTML = `✅ Вы вошли как <strong>${user.name}</strong> (${user.role})`;
+                // Активируем правильную кнопку роли
+                document.querySelectorAll('.role-btn').forEach(btn => {
+                    if (btn.dataset.role === user.role) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                document.getElementById('user-name').value = user.name;
+                document.getElementById('user-email').value = user.email;
+                loadDashboard();
+            } catch(e) {}
+        }
+    }
+    
+    function saveToStorage(user) {
+        localStorage.setItem('expert_scheduler_user', JSON.stringify(user));
+    }
+    
+    function clearStorage() {
+        localStorage.removeItem('expert_scheduler_user');
+        currentUser = null;
+    }
+    
     const roleBtns = document.querySelectorAll('.role-btn');
     const registerBtn = document.getElementById('register-btn');
     const dashboardDiv = document.getElementById('dashboard');
@@ -135,7 +165,13 @@
             btn.classList.add('active');
             currentRole = btn.dataset.role;
             if (currentUser) {
-                loadDashboard();
+                // Если уже были залогинены, но сменили роль — выходим
+                clearStorage();
+                currentUser = null;
+                document.getElementById('current-user').innerHTML = '';
+                document.getElementById('user-name').value = '';
+                document.getElementById('user-email').value = '';
+                dashboardDiv.innerHTML = '<div style="text-align: center; padding: 3rem;">Выберите роль и зарегистрируйтесь</div>';
             }
         });
     });
@@ -143,6 +179,11 @@
     registerBtn.addEventListener('click', async () => {
         const name = document.getElementById('user-name').value;
         const email = document.getElementById('user-email').value;
+        
+        if (!name || !email) {
+            alert("Введите имя и email");
+            return;
+        }
         
         try {
             const response = await fetch(`${API_URL}/api/users`, {
@@ -152,17 +193,18 @@
             });
             const user = await response.json();
             currentUser = user;
+            saveToStorage(user);
             document.getElementById('current-user').innerHTML = `✅ Вы вошли как <strong>${user.name}</strong> (${user.role})`;
             loadDashboard();
         } catch (err) {
             console.error(err);
-            alert('Ошибка регистрации. Возможно, пользователь уже существует. Пробуем получить список...');
-            // Пытаемся получить пользователя из списка
+            // Пробуем получить пользователя из списка
             const usersRes = await fetch(`${API_URL}/api/users`);
             const users = await usersRes.json();
             const existing = users.find(u => u.email === email);
             if (existing) {
                 currentUser = existing;
+                saveToStorage(existing);
                 document.getElementById('current-user').innerHTML = `✅ Вы вошли как <strong>${existing.name}</strong> (${existing.role})`;
                 loadDashboard();
             } else {
@@ -174,21 +216,19 @@
     async function loadDashboard() {
         if (!currentUser) return;
         
-        if (currentRole === 'manager') {
+        if (currentUser.role === 'manager') {
             await loadManagerView();
-        } else if (currentRole === 'expert') {
+        } else if (currentUser.role === 'expert') {
             await loadExpertView();
-        } else if (currentRole === 'admin') {
+        } else if (currentUser.role === 'admin') {
             await loadAdminView();
         }
     }
     
     async function loadManagerView() {
-        // Показать свободные слоты
         const slotsRes = await fetch(`${API_URL}/api/slots/free`);
         const freeSlots = await slotsRes.json();
         
-        // Показать мои бронирования
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=manager&user_id=${currentUser.id}`);
         const myBookings = await bookingsRes.json();
         
@@ -233,8 +273,8 @@
             slot_id: slotId,
             manager_id: currentUser.id,
             client_name: clientName,
-            client_phone: clientPhone,
-            client_email: clientEmail
+            client_phone: clientPhone || "",
+            client_email: clientEmail || ""
         };
         
         const response = await fetch(`${API_URL}/api/bookings`, {
@@ -252,11 +292,9 @@
     };
     
     async function loadExpertView() {
-        // Мои слоты
         const slotsRes = await fetch(`${API_URL}/api/slots?expert_id=${currentUser.id}`);
         let mySlots = await slotsRes.json();
         
-        // Мои бронирования (кто записан)
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=expert&user_id=${currentUser.id}`);
         const myBookings = await bookingsRes.json();
         
@@ -287,12 +325,12 @@
             html += `
                 <div class="booking-card">
                     <div>
-                        <strong>${b.client_name}</strong> (${b.client_phone || 'без телефона'})<br>
+                        <strong>${b.client_name}</strong> (тел: ${b.client_phone || 'не указан'})<br>
                         📆 ${b.date} ${b.start_time}<br>
                         Статус: <span class="status ${b.status}">${b.status}</span><br>
                         <div class="zoom-link">🔗 ${b.zoom_link}</div>
                     </div>
-                    ${b.status === 'pending' ? `<button class="success" onclick="confirmBooking('${b.id}')">✅ Подтвердить</button>` : ''}
+                    ${b.status === 'pending' ? `<button class="success" onclick="confirmBooking('${b.id}')">✅ Подтвердить запись</button>` : ''}
                 </div>
             `;
         });
@@ -352,13 +390,13 @@
         const allBookings = await bookingsRes.json();
         
         let html = `<h2>👑 Все записи системы</h2><div class="bookings-list">`;
+        if (allBookings.length === 0) html += `<p>Нет записей</p>`;
         allBookings.forEach(b => {
             html += `
                 <div class="booking-card">
                     <div>
                         <strong>${b.client_name}</strong> → ${b.expert_name}<br>
                         📆 ${b.date} ${b.start_time}<br>
-                        Менеджер ID: ${b.manager_id || 'неизвестен'}<br>
                         Статус: <span class="status ${b.status}">${b.status}</span><br>
                         <div class="zoom-link">🔗 ${b.zoom_link}</div>
                     </div>
@@ -368,6 +406,9 @@
         html += `</div>`;
         dashboardDiv.innerHTML = html;
     }
+    
+    // При загрузке страницы пробуем восстановить сессию
+    loadFromStorage();
 </script>
 </body>
 </html>
