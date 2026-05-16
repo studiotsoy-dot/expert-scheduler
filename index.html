@@ -16,7 +16,6 @@
         }
         .container { max-width: 1600px; margin: 0 auto; position: relative; }
         
-        /* Хедер с логотипами */
         .header {
             background: rgba(255,255,255,0.05);
             backdrop-filter: blur(10px);
@@ -122,7 +121,6 @@
         button.secondary { background: #475569; color: white; }
         button.info { background: #3b82f6; color: white; }
         
-        /* Таблицы с горизонтальным скроллом для мобильных */
         .table-wrapper {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
@@ -154,7 +152,6 @@
             border: 1px solid rgba(255,255,255,0.05);
         }
         
-        /* Статусы */
         .status { padding: 4px 10px; border-radius: 20px; font-size: 11px; display: inline-block; font-weight: 600; }
         .status-pending { background: #f59e0b; color: #1a1a2e; }
         .status-confirmed { background: #10b981; color: white; }
@@ -174,7 +171,6 @@
         .tab { padding: 8px 16px; cursor: pointer; border-radius: 40px; font-size: 13px; }
         .tab.active { background: rgba(45,212,191,0.2); color: #2dd4bf; }
         
-        /* Футер с логотипом разработчика */
         .footer {
             margin-top: 30px;
             text-align: center;
@@ -193,7 +189,6 @@
         }
         .dev-logo:hover { color: #2dd4bf; }
         
-        /* Модальное окно */
         .modal {
             display: none;
             position: fixed;
@@ -221,7 +216,6 @@
         .user-active { color: #10b981; }
         .user-inactive { color: #ef4444; }
         
-        /* Специально для мобильных — карточки вместо таблиц на маленьких экранах (опционально) */
         @media (max-width: 768px) {
             body { padding: 12px; }
             .header { padding: 12px 16px; }
@@ -245,7 +239,7 @@
                 </a>
             </div>
             <h1>📅 Expert Scheduler CRM</h1>
-            <div style="width: 40px;"></div> <!-- баланс для центровки -->
+            <div style="width: 40px;"></div>
         </div>
         
         <div class="role-selector" id="role-selector">
@@ -276,7 +270,6 @@
     </div>
 </div>
 
-<!-- Модальное окно для комментария -->
 <div id="status-modal" class="modal">
     <div class="modal-content">
         <h3>📝 Комментарий к статусу</h3>
@@ -297,7 +290,6 @@
     let statusNames = {};
     let pendingStatusUpdate = null;
     
-    // Настройки логотипов (можно редактировать)
     const COMPANY_CONFIG = {
         name: "Студия Чай",
         url: "https://ваш-сайт.ру",
@@ -308,7 +300,6 @@
         url: "https://ваш-сайт-разработчика.рф"
     };
     
-    // Применяем настройки логотипов
     document.getElementById('company-name').innerText = COMPANY_CONFIG.name;
     document.getElementById('company-link').href = COMPANY_CONFIG.url;
     document.getElementById('dev-link').innerHTML = `🧠 Разработано в ${DEV_CONFIG.name}`;
@@ -316,7 +307,6 @@
     
     const ADMIN_EMAIL = "studiotsoy@gmail.com";
     
-    // Показываем поле для ссылки на визитку, если выбрана роль эксперта
     document.querySelectorAll('.role-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             if (btn.dataset.role === 'expert') {
@@ -482,7 +472,6 @@
         else if (currentUser.role === 'admin') await loadAdminView();
     }
     
-    // Функция для кликабельного имени эксперта
     function getExpertNameLink(expert) {
         if (expert.portfolio_url && expert.portfolio_url.trim()) {
             return `<a href="${expert.portfolio_url}" target="_blank" class="clickable-name">${expert.name}</a>`;
@@ -493,11 +482,10 @@
     async function loadManagerView() {
         const slotsRes = await fetch(`${API_URL}/api/slots/free`);
         const freeSlots = await slotsRes.json();
-        // Получаем пользователей для portfolio_url
         const usersRes = await fetch(`${API_URL}/api/users`);
         const users = await usersRes.json();
         const userMap = {};
-        users.forEach(u => userMap[u.id] = u;
+        users.forEach(u => userMap[u.id] = u);
         
         let html = `<h2>📅 Свободные слоты</h2><div class="table-wrapper"><table class="data-table"><thead><tr><th>Эксперт</th><th>Дата</th><th>Время</th><th></th></tr></thead><tbody>`;
         if (freeSlots.length === 0) html += `<tr><td colspan="4">Нет свободных слотов</td></tr>`;
@@ -569,12 +557,14 @@
     }
     
     window.onStatusChange = (bookingId, newStatus) => { showStatusModal(bookingId, newStatus, () => loadDashboard()); };
+    
     window.createSlot = async () => {
         const date = document.getElementById('new-slot-date').value, start = document.getElementById('new-slot-start').value, end = document.getElementById('new-slot-end').value;
         if (!date || !start || !end) { alert("Заполните дату, начало и конец"); return; }
         const response = await fetch(`${API_URL}/api/slots`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expert_id: currentUser.id, date, start_time: start, end_time: end }) });
         if (response.ok) { alert("Слот создан"); loadDashboard(); } else { alert("Ошибка"); }
     };
+    
     window.editSlot = async (slotId, oldDate, oldStart, oldEnd) => {
         const newDate = prompt("Новая дата (ГГГГ-ММ-ДД):", oldDate); if (!newDate) return;
         const newStart = prompt("Новое время начала:", oldStart); if (!newStart) return;
@@ -582,6 +572,7 @@
         const response = await fetch(`${API_URL}/api/slots/${slotId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expert_id: currentUser.id, date: newDate, start_time: newStart, end_time: newEnd }) });
         if (response.ok) { alert("Слот обновлён"); loadDashboard(); } else { alert("Ошибка"); }
     };
+    
     window.deleteSlot = async (slotId) => {
         if (!confirm("Удалить этот слот?")) return;
         const response = await fetch(`${API_URL}/api/slots/${slotId}?expert_id=${currentUser.id}`, { method: 'DELETE' });
@@ -637,7 +628,17 @@
         if (allBookings.length === 0) html += `<tr><td colspan="9">Нет записей</td></tr>`;
         allBookings.forEach(b => {
             const expertDisplay = getExpertNameLink({ name: b.expert_name, portfolio_url: (userMap[b.expert_id] || {}).portfolio_url });
-            html += `<tr><td><strong>${b.client_name}</strong></td><td>${b.client_email || '—'}</td><td>${b.client_phone || '—'}</td><td>${expertDisplay}</td><td>${b.date} ${b.start_time}</td><td>${b.manager_name || '—'}</td><td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td><td>${b.call_comment || '—'}</td><td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td></tr>`;
+            html += `<tr>
+                <td><strong>${b.client_name}</strong></td>
+                <td>${b.client_email || '—'}</td>
+                <td>${b.client_phone || '—'}</td>
+                <td>${expertDisplay}</td>
+                <td>${b.date} ${b.start_time}</td>
+                <td>${b.manager_name || '—'}</td>
+                <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td>
+                <td>${b.call_comment || '—'}</td>
+                <td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td>
+            </tr>`;
         });
         html += `</tbody></table></div>`;
         document.getElementById('admin-tab-content').innerHTML = html;
@@ -679,6 +680,7 @@
     };
     
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+    
     document.getElementById('user-email').addEventListener('input', (e) => checkAdminAccess(e.target.value));
     loadFromStorage();
 </script>
