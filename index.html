@@ -63,6 +63,11 @@
             flex-wrap: wrap;
             gap: 1rem;
         }
+        .slot-card-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
         button {
             background: #2dd4bf;
             border: none;
@@ -75,7 +80,7 @@
         button.danger { background: #ef4444; color: white; }
         button.success { background: #10b981; color: white; }
         button.warning { background: #f59e0b; color: white; }
-        input, select {
+        select, input {
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.2);
             padding: 0.5rem;
@@ -84,14 +89,15 @@
         }
         .form-group { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
         .zoom-link { font-size: 0.8rem; color: #38bdf8; word-break: break-all; }
-        .status { padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.8rem; }
+        .status { padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.8rem; display: inline-block; }
         .status.pending { background: #f59e0b; }
         .status.confirmed { background: #10b981; }
         .status.free { background: #3b82f6; }
         .status.booked { background: #8b5cf6; }
         h2 { font-size: 1.3rem; margin: 0 0 1rem 0; }
         hr { border-color: rgba(255,255,255,0.1); margin: 1rem 0; }
-        .error { color: #ef4444; font-size: 0.8rem; margin-top: 0.5rem; }
+        .filter-bar { margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+        .badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 1rem; background: rgba(255,255,255,0.1); }
     </style>
 </head>
 <body>
@@ -118,8 +124,6 @@
 
 <script>
     const API_URL = window.location.origin;
-    
-    // Сохраняем пользователя в localStorage, чтобы не выкидывало при обновлении
     let currentUser = null;
     let currentRole = 'manager';
     
@@ -131,7 +135,6 @@
                 currentUser = user;
                 currentRole = user.role;
                 document.getElementById('current-user').innerHTML = `✅ Вы вошли как <strong>${user.name}</strong> (${user.role})`;
-                // Активируем правильную кнопку роли
                 document.querySelectorAll('.role-btn').forEach(btn => {
                     if (btn.dataset.role === user.role) {
                         btn.classList.add('active');
@@ -161,18 +164,13 @@
     
     roleBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            if (currentUser) {
+                alert(`Вы уже вошли как ${currentUser.role}. Для смены роли выйдите и зарегистрируйтесь заново.`);
+                return;
+            }
             roleBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentRole = btn.dataset.role;
-            if (currentUser) {
-                // Если уже были залогинены, но сменили роль — выходим
-                clearStorage();
-                currentUser = null;
-                document.getElementById('current-user').innerHTML = '';
-                document.getElementById('user-name').value = '';
-                document.getElementById('user-email').value = '';
-                dashboardDiv.innerHTML = '<div style="text-align: center; padding: 3rem;">Выберите роль и зарегистрируйтесь</div>';
-            }
         });
     });
     
@@ -191,6 +189,13 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, role: currentRole })
             });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                alert(error.detail || "Ошибка регистрации");
+                return;
+            }
+            
             const user = await response.json();
             currentUser = user;
             saveToStorage(user);
@@ -198,18 +203,7 @@
             loadDashboard();
         } catch (err) {
             console.error(err);
-            // Пробуем получить пользователя из списка
-            const usersRes = await fetch(`${API_URL}/api/users`);
-            const users = await usersRes.json();
-            const existing = users.find(u => u.email === email);
-            if (existing) {
-                currentUser = existing;
-                saveToStorage(existing);
-                document.getElementById('current-user').innerHTML = `✅ Вы вошли как <strong>${existing.name}</strong> (${existing.role})`;
-                loadDashboard();
-            } else {
-                alert('Не удалось создать пользователя');
-            }
+            alert('Ошибка соединения с сервером');
         }
     });
     
@@ -237,7 +231,7 @@
         freeSlots.forEach(slot => {
             html += `
                 <div class="slot-card">
-                    <div>
+                    <div class="slot-card-details">
                         <strong>${slot.expert_name}</strong><br>
                         📆 ${slot.date} | ⏰ ${slot.start_time} - ${slot.end_time}
                     </div>
@@ -250,7 +244,7 @@
         myBookings.forEach(b => {
             html += `
                 <div class="booking-card">
-                    <div>
+                    <div class="slot-card-details">
                         <strong>${b.client_name}</strong> → ${b.expert_name}<br>
                         📆 ${b.date} ${b.start_time}<br>
                         Статус: <span class="status ${b.status}">${b.status}</span><br>
@@ -269,18 +263,16 @@
         const clientPhone = prompt("Введите телефон клиента (опционально):");
         const clientEmail = prompt("Введите email клиента (опционально):");
         
-        const booking = {
-            slot_id: slotId,
-            manager_id: currentUser.id,
-            client_name: clientName,
-            client_phone: clientPhone || "",
-            client_email: clientEmail || ""
-        };
-        
         const response = await fetch(`${API_URL}/api/bookings`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(booking)
+            body: JSON.stringify({
+                slot_id: slotId,
+                manager_id: currentUser.id,
+                client_name: clientName,
+                client_phone: clientPhone || "",
+                client_email: clientEmail || ""
+            })
         });
         
         if (response.ok) {
@@ -312,7 +304,7 @@
         mySlots.forEach(slot => {
             html += `
                 <div class="slot-card">
-                    <div>
+                    <div class="slot-card-details">
                         📆 ${slot.date} | ⏰ ${slot.start_time} - ${slot.end_time}
                         Статус: <span class="status ${slot.status}">${slot.status}</span>
                     </div>
@@ -324,9 +316,10 @@
         myBookings.forEach(b => {
             html += `
                 <div class="booking-card">
-                    <div>
+                    <div class="slot-card-details">
                         <strong>${b.client_name}</strong> (тел: ${b.client_phone || 'не указан'})<br>
                         📆 ${b.date} ${b.start_time}<br>
+                        👤 Менеджер: ${b.manager_name || 'неизвестен'}<br>
                         Статус: <span class="status ${b.status}">${b.status}</span><br>
                         <div class="zoom-link">🔗 ${b.zoom_link}</div>
                     </div>
@@ -386,17 +379,73 @@
     };
     
     async function loadAdminView() {
+        // Получаем всех экспертов для фильтра
+        const usersRes = await fetch(`${API_URL}/api/users`);
+        const allUsers = await usersRes.json();
+        const experts = allUsers.filter(u => u.role === 'expert');
+        
+        // Получаем все слоты с данными
+        const slotsRes = await fetch(`${API_URL}/api/slots/admin/all`);
+        let allSlots = await slotsRes.json();
+        
+        // Получаем все бронирования
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=admin&user_id=${currentUser.id}`);
         const allBookings = await bookingsRes.json();
         
-        let html = `<h2>👑 Все записи системы</h2><div class="bookings-list">`;
+        let html = `<h2>👑 Административная панель</h2>`;
+        
+        // Фильтр по эксперту
+        html += `
+            <div class="filter-bar">
+                <label>👨‍🏫 Фильтр по эксперту:</label>
+                <select id="expert-filter">
+                    <option value="all">Все эксперты</option>
+                    ${experts.map(e => `<option value="${e.id}">${e.name} (${e.email})</option>`).join('')}
+                </select>
+                <button onclick="filterSlots()">Применить фильтр</button>
+            </div>
+        `;
+        
+        // Слоты экспертов
+        html += `<h3>📅 Слоты экспертов</h3><div class="slots-grid" id="slots-container">`;
+        
+        function renderSlots(slots) {
+            if (slots.length === 0) return `<p>Нет слотов</p>`;
+            return slots.map(slot => `
+                <div class="slot-card">
+                    <div class="slot-card-details">
+                        <strong>${slot.expert_name}</strong> (${slot.expert_email})<br>
+                        📆 ${slot.date} | ⏰ ${slot.start_time} - ${slot.end_time}<br>
+                        Статус: <span class="status ${slot.status}">${slot.status}</span>
+                        ${slot.booking ? `
+                            <br><br>
+                            <strong>📌 Запись клиента:</strong><br>
+                            👤 Клиент: ${slot.booking.client_name}<br>
+                            📞 Телефон: ${slot.booking.client_phone || 'не указан'}<br>
+                            📧 Email клиента: ${slot.booking.client_email || 'не указан'}<br>
+                            👨‍💼 Менеджер: ${slot.booking.manager_name}<br>
+                            🔗 <a href="${slot.booking.zoom_link}" target="_blank">Zoom ссылка</a>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        html += `<div id="slots-list">${renderSlots(allSlots)}</div>`;
+        html += `</div><hr>`;
+        
+        // Все записи (бронирования)
+        html += `<h3>📋 Все записи системы</h3><div class="bookings-list">`;
         if (allBookings.length === 0) html += `<p>Нет записей</p>`;
         allBookings.forEach(b => {
             html += `
                 <div class="booking-card">
-                    <div>
+                    <div class="slot-card-details">
                         <strong>${b.client_name}</strong> → ${b.expert_name}<br>
                         📆 ${b.date} ${b.start_time}<br>
+                        👤 Менеджер: ${b.manager_name}<br>
+                        📞 Телефон клиента: ${b.client_phone || 'не указан'}<br>
+                        📧 Email клиента: ${b.client_email || 'не указан'}<br>
                         Статус: <span class="status ${b.status}">${b.status}</span><br>
                         <div class="zoom-link">🔗 ${b.zoom_link}</div>
                     </div>
@@ -404,10 +453,44 @@
             `;
         });
         html += `</div>`;
+        
         dashboardDiv.innerHTML = html;
+        
+        // Сохраняем данные для фильтрации
+        window.adminSlotsData = allSlots;
     }
     
-    // При загрузке страницы пробуем восстановить сессию
+    window.filterSlots = () => {
+        const expertId = document.getElementById('expert-filter').value;
+        const slots = window.adminSlotsData || [];
+        const filtered = expertId === 'all' ? slots : slots.filter(s => s.expert_id === expertId);
+        const container = document.getElementById('slots-list');
+        if (container) {
+            if (filtered.length === 0) {
+                container.innerHTML = `<p>Нет слотов</p>`;
+            } else {
+                container.innerHTML = filtered.map(slot => `
+                    <div class="slot-card">
+                        <div class="slot-card-details">
+                            <strong>${slot.expert_name}</strong> (${slot.expert_email})<br>
+                            📆 ${slot.date} | ⏰ ${slot.start_time} - ${slot.end_time}<br>
+                            Статус: <span class="status ${slot.status}">${slot.status}</span>
+                            ${slot.booking ? `
+                                <br><br>
+                                <strong>📌 Запись клиента:</strong><br>
+                                👤 Клиент: ${slot.booking.client_name}<br>
+                                📞 Телефон: ${slot.booking.client_phone || 'не указан'}<br>
+                                📧 Email клиента: ${slot.booking.client_email || 'не указан'}<br>
+                                👨‍💼 Менеджер: ${slot.booking.manager_name}<br>
+                                🔗 <a href="${slot.booking.zoom_link}" target="_blank">Zoom ссылка</a>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+    };
+    
     loadFromStorage();
 </script>
 </body>
