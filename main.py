@@ -404,6 +404,44 @@ def root():
 def index():
     return FileResponse("index.html")
 
+# ========== УПРАВЛЕНИЕ СЛОТАМИ ДЛЯ ЭКСПЕРТА ==========
+@app.put("/api/slots/{slot_id}")
+def update_slot(slot_id: str, slot: SlotCreate):
+    if slot_id not in DATABASE["slots"]:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    existing_slot = DATABASE["slots"][slot_id]
+    
+    # Проверяем, что слот принадлежит эксперту
+    if existing_slot["expert_id"] != slot.expert_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Проверяем, что слот свободен (можно редактировать только free)
+    if existing_slot["status"] != "free":
+        raise HTTPException(status_code=400, detail="Cannot edit booked or confirmed slot")
+    
+    existing_slot["date"] = slot.date
+    existing_slot["start_time"] = slot.start_time
+    existing_slot["end_time"] = slot.end_time
+    
+    return existing_slot
+
+@app.delete("/api/slots/{slot_id}")
+def delete_slot(slot_id: str, expert_id: str):
+    if slot_id not in DATABASE["slots"]:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    slot = DATABASE["slots"][slot_id]
+    
+    if slot["expert_id"] != expert_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    if slot["status"] != "free":
+        raise HTTPException(status_code=400, detail="Cannot delete booked or confirmed slot")
+    
+    del DATABASE["slots"][slot_id]
+    return {"status": "deleted"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
