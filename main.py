@@ -27,7 +27,13 @@ DATABASE = {
 class UserCreate(BaseModel):
     name: str
     email: str
-    role: str  # 'expert', 'manager', 'admin'
+    role: str
+
+class UserUpdate(BaseModel):
+    user_id: str
+    name: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class SlotCreate(BaseModel):
     expert_id: str
@@ -55,17 +61,22 @@ def create_user(user: UserCreate):
     # Проверяем, не существует ли пользователь с такой почтой
     for existing in DATABASE["users"].values():
         if existing["email"] == user.email:
-            # Если существует, возвращаем его (логин)
-            if existing["role"] != user.role:
-                raise HTTPException(status_code=403, detail="Эта почта уже зарегистрирована с другой ролью")
-            return existing
+            # Если существует и активен — возвращаем
+            if existing.get("is_active", True):
+                if existing["role"] != user.role:
+                    raise HTTPException(status_code=403, detail="Эта почта уже зарегистрирована с другой ролью")
+                return existing
+            else:
+                raise HTTPException(status_code=403, detail="Ваш аккаунт заблокирован администратором")
     
     user_id = str(uuid.uuid4())
     DATABASE["users"][user_id] = {
         "id": user_id,
         "name": user.name,
         "email": user.email,
-        "role": user.role
+        "role": user.role,
+        "is_active": True,
+        "created_at": datetime.now().isoformat()
     }
     return DATABASE["users"][user_id]
 
@@ -77,8 +88,48 @@ def get_users():
 def get_user_role(email: str):
     for user in DATABASE["users"].values():
         if user["email"] == email:
-            return {"role": user["role"]}
-    return {"role": None}
+            return {"role": user["role"], "is_active": user.get("is_active", True)}
+    return {"role": None, "is_active": False}
+
+@app.put("/api/users")
+def update_user(update: UserUpdate):
+    """Только для админа: обновление пользователя"""
+    if update.user_id not in DATABASE["users"]:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user = DATABASE["users"][update.user_id]
+    if update.name:
+        user["name"] = update.name
+    if update.role:
+        # Проверяем, что роль валидная
+        if update.role not in ["admin", "expert", "manager"]:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        user["role"] = update.role
+    if update.is_active is not None:
+        user["is_active"] = update.is_active
+    
+    DATABASE["users"][update.user_id] = user
+    return user
+
+@app.delete("/api/users/{user_id}")
+def delete_user(user_id: str):
+    """Только для админа: удаление пользователя"""
+    if user_id not in DATABASE["users"]:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Нельзя удалить последнего админа
+    admins = [u for u in DATABASE["users"].values() if u["role"] == "admin" and u.get("is_active", True)]
+    if DATABASE["users"][user_id]["role"] == "admin" and len(admins) <= 1:
+        raise HTTPException(status_code=403, detail="Cannot delete the last admin")
+    
+    # Удаляем все слоты эксперта, если он эксперт
+    if DATABASE["users"][user_id]["role"] == "expert":
+        slots_to_delete = [s_id for s_id, s in DATABASE["slots"].items() if s["expert_id"] == user_id]
+        for s_id in slots_to_delete:
+            del DATABASE["slots"][s_id]
+    
+    del DATABASE["users"][user_id]
+    return {"status": "deleted"}
 
 # ========== SLOTS ==========
 @app.post("/api/slots")
@@ -107,8 +158,9 @@ def get_free_slots():
     result = []
     for slot in slots:
         expert = DATABASE["users"].get(slot["expert_id"])
-        slot["expert_name"] = expert["name"] if expert else "Unknown"
-        result.append(slot)
+        if expert and expert.get("is_active", True):
+            slot["expert_name"] = expert["name"] if expert else "Unknown"
+            result.append(slot)
     return result
 
 @app.get("/api/slots/admin/all")
@@ -117,6 +169,8 @@ def get_all_slots_with_experts():
     result = []
     for slot in DATABASE["slots"].values():
         expert = DATABASE["users"].get(slot["expert_id"])
+        if not expert:
+            continue
         slot_copy = slot.copy()
         slot_copy["expert_name"] = expert["name"] if expert else "Unknown"
         slot_copy["expert_email"] = expert["email"] if expert else "Unknown"
