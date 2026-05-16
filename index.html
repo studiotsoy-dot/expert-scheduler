@@ -42,6 +42,9 @@
             color: #0f172a;
             border-color: #2dd4bf;
         }
+        .role-btn.admin-hidden {
+            display: none;
+        }
         .dashboard {
             background: rgba(255,255,255,0.03);
             border-radius: 1.5rem;
@@ -66,13 +69,17 @@
         button.secondary { background: #475569; color: white; }
         button.info { background: #3b82f6; color: white; }
         select, input, textarea {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: #1e293b;
+            border: 1px solid #475569;
             padding: 0.5rem;
             border-radius: 0.5rem;
-            color: white;
+            color: #f1f5f9;
         }
-        textarea { font-family: inherit; resize: vertical; }
+        select option {
+            background: #1e293b;
+            color: #f1f5f9;
+        }
+        textarea { font-family: inherit; resize: vertical; width: 100%; }
         .zoom-link { font-size: 0.75rem; color: #38bdf8; word-break: break-all; }
         .status { padding: 0.2rem 0.6rem; border-radius: 1rem; font-size: 0.7rem; display: inline-block; font-weight: bold; }
         .status-pending { background: #f59e0b; color: #1a1a2e; }
@@ -82,6 +89,8 @@
         .status-cancelled_by_expert { background: #f97316; color: white; }
         .status-failed { background: #7c3aed; color: white; }
         .status-reschedule_request { background: #ec4899; color: white; }
+        .status-free { background: #3b82f6; color: white; }
+        .status-booked { background: #8b5cf6; color: white; }
         h2 { font-size: 1.3rem; margin: 0 0 1rem 0; }
         hr { border-color: rgba(255,255,255,0.1); margin: 1rem 0; }
         .filter-bar { margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
@@ -92,7 +101,6 @@
         .user-active { color: #10b981; }
         .user-inactive { color: #ef4444; }
         
-        /* Таблицы */
         .data-table {
             width: 100%;
             border-collapse: collapse;
@@ -114,7 +122,6 @@
         .data-table tr:hover { background: rgba(255,255,255,0.03); }
         .text-muted { color: #94a3b8; font-size: 0.75rem; }
         
-        /* Анимация для новых изменений */
         @keyframes highlight {
             0% { background: rgba(45,212,191,0.4); }
             100% { background: transparent; }
@@ -123,7 +130,6 @@
             animation: highlight 2s ease-out;
         }
         
-        /* Пользователи грид */
         .users-table {
             display: grid;
             grid-template-columns: 1.5fr 1.5fr 0.8fr 0.8fr 1.2fr 0.8fr;
@@ -139,13 +145,49 @@
             color: #94a3b8;
             margin-bottom: 0.5rem;
         }
-        .comment-preview {
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: #1e293b;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            min-width: 400px;
+            max-width: 500px;
+            border: 1px solid #475569;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+        .admin-hint {
             font-size: 0.7rem;
-            color: #94a3b8;
-            max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            color: #f59e0b;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
@@ -153,10 +195,11 @@
 <div class="container">
     <div class="header">
         <h1>📅 Expert Scheduler CRM</h1>
-        <div class="role-selector">
+        <div class="role-selector" id="role-selector">
             <div class="role-btn" data-role="manager">📋 Менеджер</div>
             <div class="role-btn" data-role="expert">🎯 Эксперт</div>
-            <div class="role-btn" data-role="admin">👑 Администратор</div>
+            <!-- Админ скрыт по умолчанию, появляется только для специального email -->
+            <div class="role-btn admin-hidden" data-role="admin" id="admin-role-btn">👑 Администратор</div>
         </div>
         <div class="form-group" id="user-info" style="margin-top: 1rem;">
             <input type="text" id="user-name" placeholder="Ваше имя">
@@ -165,10 +208,24 @@
             <button id="logout-btn" class="secondary" style="display:none;">🚪 Выйти</button>
         </div>
         <div id="current-user" style="margin-top: 0.5rem; font-size: 0.9rem; color: #94a3b8;"></div>
+        <div id="admin-hint" class="admin-hint" style="display: none;">🔐 Для входа как администратор используйте email: studiotsoy@gmail.com</div>
     </div>
 
     <div class="dashboard" id="dashboard">
         <div style="text-align: center; padding: 3rem;">Выберите роль и зарегистрируйтесь</div>
+    </div>
+</div>
+
+<!-- Модальное окно для комментария -->
+<div id="status-modal" class="modal">
+    <div class="modal-content">
+        <h3>📝 Комментарий к статусу</h3>
+        <p>Вы меняете статус на: <strong id="modal-status-name"></strong></p>
+        <textarea id="modal-comment" rows="3" placeholder="Введите комментарий..."></textarea>
+        <div class="modal-buttons">
+            <button id="modal-cancel" class="secondary">Отмена</button>
+            <button id="modal-confirm" class="success">Подтвердить</button>
+        </div>
     </div>
 </div>
 
@@ -178,7 +235,10 @@
     let currentRole = 'manager';
     let adminActiveTab = 'slots';
     let statusNames = {};
-    let lastSeenStatuses = {}; // Для отслеживания изменений статусов
+    let pendingStatusUpdate = null;
+    
+    // Разрешённый email для админа
+    const ADMIN_EMAIL = "studiotsoy@gmail.com";
     
     async function loadStatuses() {
         try {
@@ -190,6 +250,8 @@
     
     function getStatusClass(status) {
         const classes = {
+            'free': 'status-free',
+            'booked': 'status-booked',
             'pending': 'status-pending',
             'confirmed': 'status-confirmed',
             'success': 'status-success',
@@ -205,6 +267,25 @@
         return statusNames[status] || status;
     }
     
+    function checkAdminAccess(email) {
+        const adminBtn = document.getElementById('admin-role-btn');
+        if (email === ADMIN_EMAIL) {
+            adminBtn.style.display = 'inline-block';
+            document.getElementById('admin-hint').style.display = 'block';
+        } else {
+            adminBtn.style.display = 'none';
+            document.getElementById('admin-hint').style.display = 'none';
+            // Если текущая роль админ, но email не тот — сбрасываем
+            if (currentRole === 'admin') {
+                currentRole = 'manager';
+                document.querySelectorAll('.role-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.role === 'manager') btn.classList.add('active');
+                });
+            }
+        }
+    }
+    
     function loadFromStorage() {
         const saved = localStorage.getItem('expert_scheduler_user');
         if (saved) {
@@ -212,6 +293,7 @@
                 const user = JSON.parse(saved);
                 currentUser = user;
                 currentRole = user.role;
+                checkAdminAccess(user.email);
                 document.getElementById('current-user').innerHTML = `✅ Вы вошли как <strong>${user.name}</strong> (${user.role})`;
                 document.getElementById('logout-btn').style.display = 'inline-block';
                 document.querySelectorAll('.role-btn').forEach(btn => {
@@ -272,6 +354,12 @@
             return;
         }
         
+        // Проверка: если пытаются зарегистрироваться админом без специального email
+        if (currentRole === 'admin' && email !== ADMIN_EMAIL) {
+            alert("Доступ к роли Администратора разрешён только для studiotsoy@gmail.com");
+            return;
+        }
+        
         try {
             const response = await fetch(`${API_URL}/api/users`, {
                 method: 'POST',
@@ -294,6 +382,47 @@
         } catch (err) {
             console.error(err);
             alert('Ошибка соединения с сервером');
+        }
+    });
+    
+    // Функция для показа модального окна
+    function showStatusModal(bookingId, newStatus, callback) {
+        pendingStatusUpdate = { bookingId, newStatus, callback };
+        document.getElementById('modal-status-name').innerText = getStatusName(newStatus);
+        document.getElementById('modal-comment').value = '';
+        document.getElementById('status-modal').classList.add('active');
+    }
+    
+    document.getElementById('modal-cancel').addEventListener('click', () => {
+        document.getElementById('status-modal').classList.remove('active');
+        pendingStatusUpdate = null;
+    });
+    
+    document.getElementById('modal-confirm').addEventListener('click', async () => {
+        if (!pendingStatusUpdate) return;
+        const { bookingId, newStatus, callback } = pendingStatusUpdate;
+        const comment = document.getElementById('modal-comment').value;
+        
+        const response = await fetch(`${API_URL}/api/bookings/update-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking_id: bookingId,
+                expert_id: currentUser.id,
+                status: newStatus,
+                comment: comment
+            })
+        });
+        
+        document.getElementById('status-modal').classList.remove('active');
+        pendingStatusUpdate = null;
+        
+        if (response.ok) {
+            if (callback) callback(true);
+            loadDashboard();
+        } else {
+            alert("Ошибка обновления статуса");
+            if (callback) callback(false);
         }
     });
     
@@ -336,13 +465,11 @@
         html += `<hr><h2>📋 Мои записи</h2>`;
         if (myBookings.length === 0) html += `<p>Нет записей</p>`;
         else {
-            html += `<table class="data-table" id="manager-bookings-table"><thead><tr>
-                <th>Клиент</th><th>Email</th><th>Телефон</th><th>Эксперт</th><th>Дата/Время</th><th>Статус созвона</th><th>Комментарий</th><th>Zoom</th><th></th>
+            html += `<table class="data-table"><thead><tr>
+                <th>Клиент</th><th>Email</th><th>Телефон</th><th>Эксперт</th><th>Дата/Время</th><th>Статус</th><th>Комментарий</th><th>Zoom</th><th></th>
             </tr></thead><tbody>`;
             myBookings.forEach(b => {
-                const isNew = lastSeenStatuses[b.id] !== b.call_status;
-                const rowClass = isNew ? 'highlight-row' : '';
-                html += `<tr id="booking-row-${b.id}" class="${rowClass}">
+                html += `<tr>
                     <td><strong>${b.client_name}</strong></td>
                     <td>${b.client_email || '—'}</td>
                     <td>${b.client_phone || '—'}</td>
@@ -352,20 +479,11 @@
                     <td><span class="comment-preview">${b.call_comment || '—'}</span></td>
                     <td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td>
                     <td>${b.call_status === 'reschedule_request' ? `<button class="info" onclick="rescheduleBooking('${b.id}')">🔄 Переназначить</button>` : ''}</td>
-                </tr>`;
-                lastSeenStatuses[b.id] = b.call_status;
+                </table>`;
             });
             html += `</tbody></table>`;
         }
         dashboardDiv.innerHTML = html;
-        
-        // Убираем подсветку через 3 секунды
-        setTimeout(() => {
-            myBookings.forEach(b => {
-                const row = document.getElementById(`booking-row-${b.id}`);
-                if (row) row.classList.remove('highlight-row');
-            });
-        }, 3000);
     }
     
     window.bookSlot = async (slotId) => {
@@ -438,13 +556,19 @@
                 <input type="time" id="new-slot-end">
                 <button onclick="createSlot()">➕ Добавить слот</button>
             </div>
-            <table class="data-table"><thead><tr><th>Дата</th><th>Время</th><th>Статус</th></tr></thead><tbody>`;
-        if (mySlots.length === 0) html += `<tr><td colspan="3">Нет слотов</td></tr>`;
+            <table class="data-table"><thead><tr><th>Дата</th><th>Время</th><th>Статус</th><th>Действия</th></tr></thead><tbody>`;
+        if (mySlots.length === 0) html += `<tr><td colspan="4">Нет слотов</td></tr>`;
         mySlots.forEach(slot => {
-            html += `<tr>
+            html += `<tr id="slot-row-${slot.id}">
                 <td>${slot.date}</td>
                 <td>${slot.start_time} - ${slot.end_time}</td>
                 <td><span class="status ${getStatusClass(slot.status)}">${slot.status}</span></td>
+                <td class="action-buttons">
+                    ${slot.status === 'free' ? `
+                        <button class="warning" onclick="editSlot('${slot.id}', '${slot.date}', '${slot.start_time}', '${slot.end_time}')">✏️ Редактировать</button>
+                        <button class="danger" onclick="deleteSlot('${slot.id}')">🗑 Удалить</button>
+                    ` : '—'}
+                </td>
             </tr>`;
         });
         html += `</tbody></table>`;
@@ -453,7 +577,7 @@
         if (myBookings.length === 0) html += `<p>Нет записей</p>`;
         else {
             html += `<table class="data-table"><thead><tr>
-                <th>Клиент</th><th>Телефон</th><th>Email</th><th>Дата/Время</th><th>Менеджер</th><th>Статус</th><th>Комментарий</th><th>Действие</th>
+                <th>Клиент</th><th>Телефон</th><th>Email</th><th>Дата/Время</th><th>Менеджер</th><th>Статус</th><th>Комментарий</th><th>Изменить статус</th>
             </tr></thead><tbody>`;
             myBookings.forEach(b => {
                 html += `<tr id="expert-booking-${b.id}">
@@ -465,7 +589,7 @@
                     <td><span class="status ${getStatusClass(b.call_status)}" id="status-badge-${b.id}">${getStatusName(b.call_status)}</span></td>
                     <td><span id="comment-display-${b.id}">${b.call_comment || '—'}</span></td>
                     <td>
-                        <select id="status-select-${b.id}" class="status-select">
+                        <select id="status-select-${b.id}" class="status-select" onchange="onStatusChange('${b.id}', this.value)">
                             <option value="pending" ${b.call_status === 'pending' ? 'selected' : ''}>⏳ Ожидает</option>
                             <option value="confirmed" ${b.call_status === 'confirmed' ? 'selected' : ''}>✅ Подтверждён</option>
                             <option value="success" ${b.call_status === 'success' ? 'selected' : ''}>🎉 Созвон успешный</option>
@@ -475,16 +599,20 @@
                             <option value="reschedule_request" ${b.call_status === 'reschedule_request' ? 'selected' : ''}>🔄 Клиент просил перенести</option>
                         </select>
                     </td>
-                </tr>`;
+                </table>`;
             });
             html += `</tbody></table>`;
-            html += `<div class="form-group" style="margin-top: 1rem;"><button onclick="saveAllStatuses()">💾 Сохранить все изменения статусов</button></div>`;
         }
         dashboardDiv.innerHTML = html;
-        
-        // Сохраняем исходные статусы
-        window.expertBookingsData = myBookings;
     }
+    
+    window.onStatusChange = (bookingId, newStatus) => {
+        showStatusModal(bookingId, newStatus, (success) => {
+            if (success) {
+                console.log('Status updated');
+            }
+        });
+    };
     
     window.createSlot = async () => {
         const date = document.getElementById('new-slot-date').value;
@@ -515,34 +643,46 @@
         }
     };
     
-    window.saveAllStatuses = async () => {
-        if (!window.expertBookingsData) return;
+    window.editSlot = async (slotId, oldDate, oldStart, oldEnd) => {
+        const newDate = prompt("Введите новую дату (ГГГГ-ММ-ДД):", oldDate);
+        if (!newDate) return;
+        const newStart = prompt("Введите новое время начала (ЧЧ:ММ):", oldStart);
+        if (!newStart) return;
+        const newEnd = prompt("Введите новое время окончания (ЧЧ:ММ):", oldEnd);
+        if (!newEnd) return;
         
-        for (const booking of window.expertBookingsData) {
-            const select = document.getElementById(`status-select-${booking.id}`);
-            if (!select) continue;
-            const newStatus = select.value;
-            if (newStatus === booking.call_status) continue;
-            
-            const comment = prompt(`Введите комментарий для статуса "${getStatusName(newStatus)}":`, booking.call_comment || "");
-            
-            const response = await fetch(`${API_URL}/api/bookings/update-status`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    booking_id: booking.id,
-                    expert_id: currentUser.id,
-                    status: newStatus,
-                    comment: comment || ""
-                })
-            });
-            
-            if (response.ok) {
-                console.log(`Статус для ${booking.client_name} обновлён`);
-            }
+        const response = await fetch(`${API_URL}/api/slots/${slotId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                expert_id: currentUser.id,
+                date: newDate,
+                start_time: newStart,
+                end_time: newEnd
+            })
+        });
+        
+        if (response.ok) {
+            alert("Слот обновлён");
+            loadDashboard();
+        } else {
+            alert("Ошибка обновления слота");
         }
-        alert("Статусы сохранены!");
-        loadDashboard();
+    };
+    
+    window.deleteSlot = async (slotId) => {
+        if (!confirm("Удалить этот слот?")) return;
+        
+        const response = await fetch(`${API_URL}/api/slots/${slotId}?expert_id=${currentUser.id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            alert("Слот удалён");
+            loadDashboard();
+        } else {
+            alert("Ошибка удаления слота");
+        }
     };
     
     // ========== АДМИН ==========
@@ -763,6 +903,11 @@
             return m;
         });
     }
+    
+    // При загрузке проверяем email в поле ввода
+    document.getElementById('user-email').addEventListener('input', (e) => {
+        checkAdminAccess(e.target.value);
+    });
     
     loadFromStorage();
 </script>
