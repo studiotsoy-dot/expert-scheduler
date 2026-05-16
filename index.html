@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expert Scheduler</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            margin: 0;
+            padding: 20px;
+            color: #f1f5f9;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 2rem;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        h1 { margin: 0; font-size: 1.8rem; background: linear-gradient(135deg, #2dd4bf, #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .role-selector {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        .role-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 0.5rem 1.5rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .role-btn.active {
+            background: #2dd4bf;
+            color: #0f172a;
+            border-color: #2dd4bf;
+        }
+        .dashboard {
+            background: rgba(255,255,255,0.03);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .slots-grid, .bookings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .slot-card, .booking-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 1rem;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        button {
+            background: #2dd4bf;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        button.danger { background: #ef4444; color: white; }
+        button.success { background: #10b981; color: white; }
+        input, select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            color: white;
+        }
+        .form-group { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+        .zoom-link { font-size: 0.8rem; color: #38bdf8; word-break: break-all; }
+        .status { padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.8rem; }
+        .status.pending { background: #f59e0b; }
+        .status.confirmed { background: #10b981; }
+        .status.free { background: #3b82f6; }
+        .status.booked { background: #8b5cf6; }
+        h2 { font-size: 1.3rem; margin: 0 0 1rem 0; }
+        hr { border-color: rgba(255,255,255,0.1); margin: 1rem 0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📅 Expert Scheduler — Система управления расписанием</h1>
+        <div class="role-selector">
+            <div class="role-btn" data-role="manager">📋 Менеджер</div>
+            <div class="role-btn" data-role="expert">🎯 Эксперт</div>
+            <div class="role-btn" data-role="admin">👑 Администратор</div>
+        </div>
+        <div class="form-group" id="user-info" style="margin-top: 1rem;">
+            <input type="text" id="user-name" placeholder="Ваше имя" value="Тестовый Пользователь">
+            <input type="email" id="user-email" placeholder="Email" value="test@example.com">
+            <button id="register-btn">Зарегистрироваться / Войти</button>
+        </div>
+        <div id="current-user" style="margin-top: 0.5rem; font-size: 0.9rem; color: #94a3b8;"></div>
+    </div>
+
+    <div class="dashboard" id="dashboard">
+        <!-- Содержимое будет меняться в зависимости от роли -->
+        <div style="text-align: center; padding: 3rem;">Выберите роль и зарегистрируйтесь</div>
+    </div>
+</div>
+
+<script>
+    let API_URL = window.location.origin;
+    if (window.location.href.includes('localhost') || window.location.href.includes('127.0.0.1')) {
+        API_URL = 'http://localhost:8000';
+    }
+    
+    let currentUser = null;
+    let currentRole = 'manager';
+    
+    // DOM элементы
+    const roleBtns = document.querySelectorAll('.role-btn');
+    const registerBtn = document.getElementById('register-btn');
+    const dashboardDiv = document.getElementById('dashboard');
+    
+    roleBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            roleBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentRole = btn.dataset.role;
+            if (currentUser) {
+                loadDashboard();
+            }
+        });
+    });
+    
+    registerBtn.addEventListener('click', async () => {
+        const name = document.getElementById('user-name').value;
+        const email = document.getElementById('user-email').value;
+        
+        try {
+            const response = await fetch(`${API_URL}/api/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, role: currentRole })
+            });
+            const user = await response.json();
+            currentUser = user;
+            document.getElementById('current-user').innerHTML = `✅ Вы вошли как <strong>${user.name}</strong> (${user.role})`;
+            loadDashboard();
+        } catch (err) {
+            console.error(err);
+            alert('Ошибка регистрации. Возможно, пользователь уже существует. Пробуем получить список...');
+            // Пытаемся получить пользователя из списка
+            const usersRes = await fetch(`${API_URL}/api/users`);
+            const users = await usersRes.json();
+            const existing = users.find(u => u.email === email);
+            if (existing) {
+                currentUser = existing;
+                document.getElementById('current-user').innerHTML = `✅ Вы вошли как <strong>${existing.name}</strong> (${existing.role})`;
+                loadDashboard();
+            } else {
+                alert('Не удалось создать пользователя');
+            }
+        }
+    });
+    
+    async function loadDashboard() {
+        if (!currentUser) return;
+        
+        if (currentRole === 'manager') {
+            await loadManagerView();
+        } else if (currentRole === 'expert') {
+            await loadExpertView();
+        } else if (currentRole === 'admin') {
+            await loadAdminView();
+        }
+    }
+    
+    async function loadManagerView() {
+        // Показать свободные слоты
+        const slotsRes = await fetch(`${API_URL}/api/slots/free`);
+        const freeSlots = await slotsRes.json();
+        
+        // Показать мои бронирования
+        const bookingsRes = await fetch(`${API_URL}/api/bookings?role=manager&user_id=${currentUser.id}`);
+        const myBookings = await bookingsRes.json();
+        
+        let html = `<h2>📅 Свободные слоты для записи</h2><div class="slots-grid">`;
+        if (freeSlots.length === 0) html += `<p>Нет свободных слотов</p>`;
+        freeSlots.forEach(slot => {
+            html += `
+                <div class="slot-card">
+                    <div>
+                        <strong>${slot.expert_name}</strong><br>
+                        📆 ${slot.date} | ⏰ ${slot.start_time} - ${slot.end_time}
+                    </div>
+                    <button onclick="bookSlot('${slot.id}')">📝 Записать клиента</button>
+                </div>
+            `;
+        });
+        html += `</div><hr><h2>📋 Мои записи (клиенты)</h2><div class="bookings-list">`;
+        if (myBookings.length === 0) html += `<p>Нет записей</p>`;
+        myBookings.forEach(b => {
+            html += `
+                <div class="booking-card">
+                    <div>
+                        <strong>${b.client_name}</strong> → ${b.expert_name}<br>
+                        📆 ${b.date} ${b.start_time}<br>
+                        Статус: <span class="status ${b.status}">${b.status}</span><br>
+                        <div class="zoom-link">🔗 ${b.zoom_link}</div>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        dashboardDiv.innerHTML = html;
+    }
+    
+    window.bookSlot = async (slotId) => {
+        const clientName = prompt("Введите ФИО клиента:");
+        if (!clientName) return;
+        const clientPhone = prompt("Введите телефон клиента (опционально):");
+        const clientEmail = prompt("Введите email клиента (опционально):");
+        
+        const booking = {
+            slot_id: slotId,
+            manager_id: currentUser.id,
+            client_name: clientName,
+            client_phone: clientPhone,
+            client_email: clientEmail
+        };
+        
+        const response = await fetch(`${API_URL}/api/bookings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(booking)
+        });
+        
+        if (response.ok) {
+            alert("Клиент успешно записан! Ссылка Zoom сгенерирована.");
+            loadDashboard();
+        } else {
+            alert("Ошибка записи. Возможно, слот уже занят.");
+        }
+    };
+    
+    async function loadExpertView() {
+        // Мои слоты
+        const slotsRes = await fetch(`${API_URL}/api/slots?expert_id=${currentUser.id}`);
+        let mySlots = await slotsRes.json();
+        
+        // Мои бронирования (кто записан)
+        const bookingsRes = await fetch(`${API_URL}/api/bookings?role=expert&user_id=${currentUser.id}`);
+        const myBookings = await bookingsRes.json();
+        
+        let html = `
+            <h2>🕐 Мои слоты (расписание)</h2>
+            <div class="form-group">
+                <input type="date" id="new-slot-date" placeholder="Дата">
+                <input type="time" id="new-slot-start" placeholder="Начало">
+                <input type="time" id="new-slot-end" placeholder="Конец">
+                <button onclick="createSlot()">➕ Добавить слот</button>
+            </div>
+            <div class="slots-grid">
+        `;
+        if (mySlots.length === 0) html += `<p>У вас нет созданных слотов</p>`;
+        mySlots.forEach(slot => {
+            html += `
+                <div class="slot-card">
+                    <div>
+                        📆 ${slot.date} | ⏰ ${slot.start_time} - ${slot.end_time}
+                        Статус: <span class="status ${slot.status}">${slot.status}</span>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div><hr><h2>📋 Записи клиентов на мои слоты</h2><div class="bookings-list">`;
+        if (myBookings.length === 0) html += `<p>Нет записей</p>`;
+        myBookings.forEach(b => {
+            html += `
+                <div class="booking-card">
+                    <div>
+                        <strong>${b.client_name}</strong> (${b.client_phone || 'без телефона'})<br>
+                        📆 ${b.date} ${b.start_time}<br>
+                        Статус: <span class="status ${b.status}">${b.status}</span><br>
+                        <div class="zoom-link">🔗 ${b.zoom_link}</div>
+                    </div>
+                    ${b.status === 'pending' ? `<button class="success" onclick="confirmBooking('${b.id}')">✅ Подтвердить</button>` : ''}
+                </div>
+            `;
+        });
+        html += `</div>`;
+        dashboardDiv.innerHTML = html;
+    }
+    
+    window.createSlot = async () => {
+        const date = document.getElementById('new-slot-date').value;
+        const start = document.getElementById('new-slot-start').value;
+        const end = document.getElementById('new-slot-end').value;
+        
+        if (!date || !start || !end) {
+            alert("Заполните дату, начало и конец");
+            return;
+        }
+        
+        const response = await fetch(`${API_URL}/api/slots`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                expert_id: currentUser.id,
+                date: date,
+                start_time: start,
+                end_time: end
+            })
+        });
+        
+        if (response.ok) {
+            alert("Слот создан");
+            loadDashboard();
+        } else {
+            alert("Ошибка создания слота");
+        }
+    };
+    
+    window.confirmBooking = async (bookingId) => {
+        const response = await fetch(`${API_URL}/api/bookings/confirm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking_id: bookingId,
+                expert_id: currentUser.id
+            })
+        });
+        
+        if (response.ok) {
+            alert("Запись подтверждена!");
+            loadDashboard();
+        } else {
+            alert("Ошибка подтверждения");
+        }
+    };
+    
+    async function loadAdminView() {
+        const bookingsRes = await fetch(`${API_URL}/api/bookings?role=admin&user_id=${currentUser.id}`);
+        const allBookings = await bookingsRes.json();
+        
+        let html = `<h2>👑 Все записи системы</h2><div class="bookings-list">`;
+        allBookings.forEach(b => {
+            html += `
+                <div class="booking-card">
+                    <div>
+                        <strong>${b.client_name}</strong> → ${b.expert_name}<br>
+                        📆 ${b.date} ${b.start_time}<br>
+                        Менеджер ID: ${b.manager_id || 'неизвестен'}<br>
+                        Статус: <span class="status ${b.status}">${b.status}</span><br>
+                        <div class="zoom-link">🔗 ${b.zoom_link}</div>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        dashboardDiv.innerHTML = html;
+    }
+</script>
+</body>
+</html>
