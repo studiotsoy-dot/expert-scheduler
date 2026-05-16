@@ -2,65 +2,118 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
     <title>Expert Scheduler CRM</title>
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             margin: 0;
-            padding: 20px;
+            padding: 16px;
             color: #f1f5f9;
+            min-height: 100vh;
         }
-        .container { max-width: 1600px; margin: 0 auto; }
+        .container { max-width: 1600px; margin: 0 auto; position: relative; }
+        
+        /* Хедер с логотипами */
         .header {
             background: rgba(255,255,255,0.05);
             backdrop-filter: blur(10px);
-            border-radius: 2rem;
-            padding: 1.5rem 2rem;
-            margin-bottom: 2rem;
+            border-radius: 24px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
             border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
         }
-        h1 { margin: 0; font-size: 1.8rem; background: linear-gradient(135deg, #2dd4bf, #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .company-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .company-logo a {
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .company-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #2dd4bf, #38bdf8);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .company-name {
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+        }
+        .company-tagline {
+            font-size: 10px;
+            color: #94a3b8;
+        }
+        h1 { 
+            font-size: 1.5rem; 
+            background: linear-gradient(135deg, #2dd4bf, #38bdf8); 
+            -webkit-background-clip: text; 
+            background-clip: text; 
+            color: transparent;
+            margin: 0;
+        }
         .role-selector {
             display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
+            gap: 8px;
             flex-wrap: wrap;
+            margin-top: 8px;
         }
         .role-btn {
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.2);
-            padding: 0.5rem 1.5rem;
-            border-radius: 2rem;
+            padding: 8px 16px;
+            border-radius: 40px;
             cursor: pointer;
             transition: all 0.2s;
+            font-size: 14px;
         }
         .role-btn.active {
             background: #2dd4bf;
             color: #0f172a;
             border-color: #2dd4bf;
         }
-        .role-btn.admin-hidden {
-            display: none;
+        .role-btn.admin-hidden { display: none; }
+        
+        .form-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        input, select, textarea {
+            background: #1e293b;
+            border: 1px solid #475569;
+            padding: 10px 12px;
+            border-radius: 12px;
+            color: #f1f5f9;
+            font-size: 14px;
         }
-        .dashboard {
-            background: rgba(255,255,255,0.03);
-            border-radius: 1.5rem;
-            padding: 1.5rem;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .form-group { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+        select option { background: #1e293b; color: #f1f5f9; }
         button {
             background: #2dd4bf;
             border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
+            padding: 10px 16px;
+            border-radius: 12px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 600;
             color: #0f172a;
             transition: all 0.2s;
+            font-size: 14px;
         }
         button:hover { opacity: 0.8; transform: translateY(-1px); }
         button.danger { background: #ef4444; color: white; }
@@ -68,20 +121,41 @@
         button.warning { background: #f59e0b; color: white; }
         button.secondary { background: #475569; color: white; }
         button.info { background: #3b82f6; color: white; }
-        select, input, textarea {
-            background: #1e293b;
-            border: 1px solid #475569;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            color: #f1f5f9;
+        
+        /* Таблицы с горизонтальным скроллом для мобильных */
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 12px 0;
         }
-        select option {
-            background: #1e293b;
-            color: #f1f5f9;
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 600px;
         }
-        textarea { font-family: inherit; resize: vertical; width: 100%; }
-        .zoom-link { font-size: 0.75rem; color: #38bdf8; word-break: break-all; }
-        .status { padding: 0.2rem 0.6rem; border-radius: 1rem; font-size: 0.7rem; display: inline-block; font-weight: bold; }
+        .data-table th {
+            text-align: left;
+            padding: 12px 8px;
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        .data-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            vertical-align: middle;
+        }
+        .dashboard {
+            background: rgba(255,255,255,0.03);
+            border-radius: 24px;
+            padding: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        /* Статусы */
+        .status { padding: 4px 10px; border-radius: 20px; font-size: 11px; display: inline-block; font-weight: 600; }
         .status-pending { background: #f59e0b; color: #1a1a2e; }
         .status-confirmed { background: #10b981; color: white; }
         .status-success { background: #06b6d4; color: white; }
@@ -91,65 +165,33 @@
         .status-reschedule_request { background: #ec4899; color: white; }
         .status-free { background: #3b82f6; color: white; }
         .status-booked { background: #8b5cf6; color: white; }
-        h2 { font-size: 1.3rem; margin: 0 0 1rem 0; }
-        hr { border-color: rgba(255,255,255,0.1); margin: 1rem 0; }
-        .filter-bar { margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; flex-wrap: wrap; }
-        .tab { padding: 0.5rem 1rem; cursor: pointer; border-radius: 0.5rem; }
+        
+        .zoom-link { font-size: 11px; color: #38bdf8; word-break: break-all; }
+        .clickable-name { color: #2dd4bf; cursor: pointer; text-decoration: none; font-weight: 600; }
+        .clickable-name:hover { text-decoration: underline; }
+        
+        .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .tab { padding: 8px 16px; cursor: pointer; border-radius: 40px; font-size: 13px; }
         .tab.active { background: rgba(45,212,191,0.2); color: #2dd4bf; }
-        .badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 1rem; background: rgba(255,255,255,0.1); }
-        .user-active { color: #10b981; }
-        .user-inactive { color: #ef4444; }
         
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
+        /* Футер с логотипом разработчика */
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            padding: 16px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 11px;
+            color: #64748b;
         }
-        .data-table th {
-            text-align: left;
-            padding: 0.75rem 0.5rem;
-            background: rgba(255,255,255,0.05);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            font-weight: 600;
-            color: #94a3b8;
-        }
-        .data-table td {
-            padding: 0.6rem 0.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            vertical-align: middle;
-        }
-        .data-table tr:hover { background: rgba(255,255,255,0.03); }
-        .text-muted { color: #94a3b8; font-size: 0.75rem; }
-        
-        @keyframes highlight {
-            0% { background: rgba(45,212,191,0.4); }
-            100% { background: transparent; }
-        }
-        .highlight-row {
-            animation: highlight 2s ease-out;
-        }
-        
-        .users-table {
-            display: grid;
-            grid-template-columns: 1.5fr 1.5fr 0.8fr 0.8fr 1.2fr 0.8fr;
-            gap: 0.5rem;
+        .dev-logo {
+            display: inline-flex;
             align-items: center;
-            padding: 0.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            gap: 6px;
+            color: #64748b;
+            text-decoration: none;
+            transition: color 0.2s;
         }
-        .users-header {
-            background: rgba(255,255,255,0.05);
-            border-radius: 0.5rem;
-            font-weight: bold;
-            color: #94a3b8;
-            margin-bottom: 0.5rem;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
+        .dev-logo:hover { color: #2dd4bf; }
         
         /* Модальное окно */
         .modal {
@@ -159,60 +201,78 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             z-index: 1000;
             justify-content: center;
             align-items: center;
+            padding: 16px;
         }
-        .modal.active {
-            display: flex;
-        }
+        .modal.active { display: flex; }
         .modal-content {
             background: #1e293b;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            min-width: 400px;
-            max-width: 500px;
+            border-radius: 24px;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
             border: 1px solid #475569;
         }
-        .modal-content h3 {
-            margin-top: 0;
-        }
-        .modal-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 1rem;
-        }
-        .admin-hint {
-            font-size: 0.7rem;
-            color: #f59e0b;
-            margin-top: 0.5rem;
+        .admin-hint { font-size: 11px; color: #f59e0b; margin-top: 8px; }
+        .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .user-active { color: #10b981; }
+        .user-inactive { color: #ef4444; }
+        
+        /* Специально для мобильных — карточки вместо таблиц на маленьких экранах (опционально) */
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .header { padding: 12px 16px; }
+            .company-name { font-size: 14px; }
+            .company-icon { width: 32px; height: 32px; font-size: 18px; }
+            button { padding: 8px 12px; font-size: 12px; }
         }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>📅 Expert Scheduler CRM</h1>
+        <div class="header-top">
+            <div class="company-logo">
+                <a href="https://ваш-сайт.ру" target="_blank" id="company-link">
+                    <div class="company-icon">🏢</div>
+                    <div>
+                        <div class="company-name" id="company-name">Студия Чай</div>
+                        <div class="company-tagline">Эксперт-сервис</div>
+                    </div>
+                </a>
+            </div>
+            <h1>📅 Expert Scheduler CRM</h1>
+            <div style="width: 40px;"></div> <!-- баланс для центровки -->
+        </div>
+        
         <div class="role-selector" id="role-selector">
             <div class="role-btn" data-role="manager">📋 Менеджер</div>
             <div class="role-btn" data-role="expert">🎯 Эксперт</div>
-            <!-- Админ скрыт по умолчанию, появляется только для специального email -->
             <div class="role-btn admin-hidden" data-role="admin" id="admin-role-btn">👑 Администратор</div>
         </div>
-        <div class="form-group" id="user-info" style="margin-top: 1rem;">
+        
+        <div class="form-group" id="user-info">
             <input type="text" id="user-name" placeholder="Ваше имя">
             <input type="email" id="user-email" placeholder="Email">
+            <input type="text" id="user-portfolio" placeholder="Ссылка на визитку (для эксперта)" style="display:none;">
             <button id="register-btn">Зарегистрироваться / Войти</button>
             <button id="logout-btn" class="secondary" style="display:none;">🚪 Выйти</button>
         </div>
-        <div id="current-user" style="margin-top: 0.5rem; font-size: 0.9rem; color: #94a3b8;"></div>
+        <div id="current-user" style="margin-top: 8px; font-size: 12px; color: #94a3b8;"></div>
         <div id="admin-hint" class="admin-hint" style="display: none;">🔐 Для входа как администратор используйте email: studiotsoy@gmail.com</div>
     </div>
 
     <div class="dashboard" id="dashboard">
-        <div style="text-align: center; padding: 3rem;">Выберите роль и зарегистрируйтесь</div>
+        <div style="text-align: center; padding: 40px 20px;">Выберите роль и зарегистрируйтесь</div>
+    </div>
+    
+    <div class="footer">
+        <a href="https://ваш-сайт-разработчика.рф" target="_blank" class="dev-logo" id="dev-link">
+            🧠 Разработано в Студия Чай
+        </a>
     </div>
 </div>
 
@@ -222,7 +282,7 @@
         <h3>📝 Комментарий к статусу</h3>
         <p>Вы меняете статус на: <strong id="modal-status-name"></strong></p>
         <textarea id="modal-comment" rows="3" placeholder="Введите комментарий..."></textarea>
-        <div class="modal-buttons">
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
             <button id="modal-cancel" class="secondary">Отмена</button>
             <button id="modal-confirm" class="success">Подтвердить</button>
         </div>
@@ -237,8 +297,35 @@
     let statusNames = {};
     let pendingStatusUpdate = null;
     
-    // Разрешённый email для админа
+    // Настройки логотипов (можно редактировать)
+    const COMPANY_CONFIG = {
+        name: "Студия Чай",
+        url: "https://ваш-сайт.ру",
+        icon: "🏢"
+    };
+    const DEV_CONFIG = {
+        name: "Студия Чай",
+        url: "https://ваш-сайт-разработчика.рф"
+    };
+    
+    // Применяем настройки логотипов
+    document.getElementById('company-name').innerText = COMPANY_CONFIG.name;
+    document.getElementById('company-link').href = COMPANY_CONFIG.url;
+    document.getElementById('dev-link').innerHTML = `🧠 Разработано в ${DEV_CONFIG.name}`;
+    document.getElementById('dev-link').href = DEV_CONFIG.url;
+    
     const ADMIN_EMAIL = "studiotsoy@gmail.com";
+    
+    // Показываем поле для ссылки на визитку, если выбрана роль эксперта
+    document.querySelectorAll('.role-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.dataset.role === 'expert') {
+                document.getElementById('user-portfolio').style.display = 'inline-block';
+            } else {
+                document.getElementById('user-portfolio').style.display = 'none';
+            }
+        });
+    });
     
     async function loadStatuses() {
         try {
@@ -250,14 +337,10 @@
     
     function getStatusClass(status) {
         const classes = {
-            'free': 'status-free',
-            'booked': 'status-booked',
-            'pending': 'status-pending',
-            'confirmed': 'status-confirmed',
-            'success': 'status-success',
-            'cancelled_by_client': 'status-cancelled_by_client',
-            'cancelled_by_expert': 'status-cancelled_by_expert',
-            'failed': 'status-failed',
+            'free': 'status-free', 'booked': 'status-booked',
+            'pending': 'status-pending', 'confirmed': 'status-confirmed',
+            'success': 'status-success', 'cancelled_by_client': 'status-cancelled_by_client',
+            'cancelled_by_expert': 'status-cancelled_by_expert', 'failed': 'status-failed',
             'reschedule_request': 'status-reschedule_request'
         };
         return classes[status] || 'status-pending';
@@ -275,7 +358,6 @@
         } else {
             adminBtn.style.display = 'none';
             document.getElementById('admin-hint').style.display = 'none';
-            // Если текущая роль админ, но email не тот — сбрасываем
             if (currentRole === 'admin') {
                 currentRole = 'manager';
                 document.querySelectorAll('.role-btn').forEach(btn => {
@@ -297,14 +379,12 @@
                 document.getElementById('current-user').innerHTML = `✅ Вы вошли как <strong>${user.name}</strong> (${user.role})`;
                 document.getElementById('logout-btn').style.display = 'inline-block';
                 document.querySelectorAll('.role-btn').forEach(btn => {
-                    if (btn.dataset.role === user.role) {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
+                    if (btn.dataset.role === user.role) btn.classList.add('active');
+                    else btn.classList.remove('active');
                 });
                 document.getElementById('user-name').value = user.name;
                 document.getElementById('user-email').value = user.email;
+                if (user.portfolio_url) document.getElementById('user-portfolio').value = user.portfolio_url;
                 loadDashboard();
             } catch(e) {}
         }
@@ -321,7 +401,8 @@
         document.getElementById('current-user').innerHTML = '';
         document.getElementById('user-name').value = '';
         document.getElementById('user-email').value = '';
-        dashboardDiv.innerHTML = '<div style="text-align: center; padding: 3rem;">Выберите роль и зарегистрируйтесь</div>';
+        document.getElementById('user-portfolio').value = '';
+        dashboardDiv.innerHTML = '<div style="text-align: center; padding: 40px 20px;">Выберите роль и зарегистрируйтесь</div>';
     }
     
     document.getElementById('logout-btn').addEventListener('click', () => {
@@ -329,63 +410,43 @@
         location.reload();
     });
     
-    const roleBtns = document.querySelectorAll('.role-btn');
     const registerBtn = document.getElementById('register-btn');
     const dashboardDiv = document.getElementById('dashboard');
-    
-    roleBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (currentUser) {
-                alert(`Вы уже вошли как ${currentUser.role}. Для смены роли выйдите.`);
-                return;
-            }
-            roleBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentRole = btn.dataset.role;
-        });
-    });
     
     registerBtn.addEventListener('click', async () => {
         const name = document.getElementById('user-name').value;
         const email = document.getElementById('user-email').value;
+        const portfolioUrl = document.getElementById('user-portfolio').value;
         
-        if (!name || !email) {
-            alert("Введите имя и email");
-            return;
-        }
-        
-        // Проверка: если пытаются зарегистрироваться админом без специального email
+        if (!name || !email) { alert("Введите имя и email"); return; }
         if (currentRole === 'admin' && email !== ADMIN_EMAIL) {
             alert("Доступ к роли Администратора разрешён только для studiotsoy@gmail.com");
             return;
         }
         
         try {
+            const body = { name, email, role: currentRole };
+            if (currentRole === 'expert' && portfolioUrl) body.portfolio_url = portfolioUrl;
+            
             const response = await fetch(`${API_URL}/api/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, role: currentRole })
+                body: JSON.stringify(body)
             });
-            
             if (!response.ok) {
                 const error = await response.json();
                 alert(error.detail || "Ошибка регистрации");
                 return;
             }
-            
             const user = await response.json();
             currentUser = user;
             saveToStorage(user);
             document.getElementById('current-user').innerHTML = `✅ Вы вошли как <strong>${user.name}</strong> (${user.role})`;
             document.getElementById('logout-btn').style.display = 'inline-block';
             loadDashboard();
-        } catch (err) {
-            console.error(err);
-            alert('Ошибка соединения с сервером');
-        }
+        } catch(err) { alert('Ошибка соединения с сервером'); }
     });
     
-    // Функция для показа модального окна
     function showStatusModal(bookingId, newStatus, callback) {
         pendingStatusUpdate = { bookingId, newStatus, callback };
         document.getElementById('modal-status-name').innerText = getStatusName(newStatus);
@@ -402,87 +463,60 @@
         if (!pendingStatusUpdate) return;
         const { bookingId, newStatus, callback } = pendingStatusUpdate;
         const comment = document.getElementById('modal-comment').value;
-        
         const response = await fetch(`${API_URL}/api/bookings/update-status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                booking_id: bookingId,
-                expert_id: currentUser.id,
-                status: newStatus,
-                comment: comment
-            })
+            body: JSON.stringify({ booking_id: bookingId, expert_id: currentUser.id, status: newStatus, comment })
         });
-        
         document.getElementById('status-modal').classList.remove('active');
         pendingStatusUpdate = null;
-        
-        if (response.ok) {
-            if (callback) callback(true);
-            loadDashboard();
-        } else {
-            alert("Ошибка обновления статуса");
-            if (callback) callback(false);
-        }
+        if (response.ok) { if(callback) callback(true); loadDashboard(); }
+        else { alert("Ошибка"); if(callback) callback(false); }
     });
     
     async function loadDashboard() {
         if (!currentUser) return;
         await loadStatuses();
-        
-        if (currentUser.role === 'manager') {
-            await loadManagerView();
-        } else if (currentUser.role === 'expert') {
-            await loadExpertView();
-        } else if (currentUser.role === 'admin') {
-            await loadAdminView();
-        }
+        if (currentUser.role === 'manager') await loadManagerView();
+        else if (currentUser.role === 'expert') await loadExpertView();
+        else if (currentUser.role === 'admin') await loadAdminView();
     }
     
-    // ========== МЕНЕДЖЕР ==========
+    // Функция для кликабельного имени эксперта
+    function getExpertNameLink(expert) {
+        if (expert.portfolio_url && expert.portfolio_url.trim()) {
+            return `<a href="${expert.portfolio_url}" target="_blank" class="clickable-name">${expert.name}</a>`;
+        }
+        return expert.name;
+    }
+    
     async function loadManagerView() {
         const slotsRes = await fetch(`${API_URL}/api/slots/free`);
         const freeSlots = await slotsRes.json();
+        // Получаем пользователей для portfolio_url
+        const usersRes = await fetch(`${API_URL}/api/users`);
+        const users = await usersRes.json();
+        const userMap = {};
+        users.forEach(u => userMap[u.id] = u;
+        
+        let html = `<h2>📅 Свободные слоты</h2><div class="table-wrapper"><table class="data-table"><thead><tr><th>Эксперт</th><th>Дата</th><th>Время</th><th></th></tr></thead><tbody>`;
+        if (freeSlots.length === 0) html += `<tr><td colspan="4">Нет свободных слотов</td></tr>`;
+        freeSlots.forEach(slot => {
+            const expert = userMap[slot.expert_id] || {};
+            const expertDisplay = getExpertNameLink({ name: slot.expert_name, portfolio_url: expert.portfolio_url });
+            html += `<tr><td>${expertDisplay}</td><td>${slot.date}</td><td>${slot.start_time} - ${slot.end_time}</td><td><button onclick="bookSlot('${slot.id}')">📝 Записать</button></td></tr>`;
+        });
+        html += `</tbody></table></div>`;
         
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=manager&user_id=${currentUser.id}`);
         let myBookings = await bookingsRes.json();
-        
-        let html = `<h2>📅 Свободные слоты</h2>`;
-        if (freeSlots.length === 0) html += `<p>Нет свободных слотов</p>`;
-        else {
-            html += `<table class="data-table"><thead><tr><th>Эксперт</th><th>Дата</th><th>Время</th><th></th></tr></thead><tbody>`;
-            freeSlots.forEach(slot => {
-                html += `<tr>
-                    <td><strong>${slot.expert_name}</strong></td>
-                    <td>${slot.date}</td>
-                    <td>${slot.start_time} - ${slot.end_time}</td>
-                    <td><button onclick="bookSlot('${slot.id}')">📝 Записать</button></td>
-                </tr>`;
-            });
-            html += `</tbody></table>`;
-        }
-        
-        html += `<hr><h2>📋 Мои записи</h2>`;
-        if (myBookings.length === 0) html += `<p>Нет записей</p>`;
-        else {
-            html += `<table class="data-table"><thead><tr>
-                <th>Клиент</th><th>Email</th><th>Телефон</th><th>Эксперт</th><th>Дата/Время</th><th>Статус</th><th>Комментарий</th><th>Zoom</th><th></th>
-            </tr></thead><tbody>`;
-            myBookings.forEach(b => {
-                html += `<tr>
-                    <td><strong>${b.client_name}</strong></td>
-                    <td>${b.client_email || '—'}</td>
-                    <td>${b.client_phone || '—'}</td>
-                    <td>${b.expert_name}</td>
-                    <td>${b.date} ${b.start_time}</td>
-                    <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td>
-                    <td><span class="comment-preview">${b.call_comment || '—'}</span></td>
-                    <td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td>
-                    <td>${b.call_status === 'reschedule_request' ? `<button class="info" onclick="rescheduleBooking('${b.id}')">🔄 Переназначить</button>` : ''}</td>
-                </table>`;
-            });
-            html += `</tbody></table>`;
-        }
+        html += `<hr><h2>📋 Мои записи</h2><div class="table-wrapper"><table class="data-table"><thead><tr><th>Клиент</th><th>Email</th><th>Телефон</th><th>Эксперт</th><th>Дата/Время</th><th>Статус</th><th>Комментарий</th><th>Zoom</th><th></th></tr></thead><tbody>`;
+        if (myBookings.length === 0) html += `<tr><td colspan="9">Нет записей</td></tr>`;
+        myBookings.forEach(b => {
+            const expertDisplay = getExpertNameLink({ name: b.expert_name, portfolio_url: (userMap[b.expert_id] || {}).portfolio_url });
+            html += `<tr><td><strong>${b.client_name}</strong></td><td>${b.client_email || '—'}</td><td>${b.client_phone || '—'}</td><td>${expertDisplay}</td><td>${b.date} ${b.start_time}</td><td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td><td>${b.call_comment || '—'}</td><td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td><td>${b.call_status === 'reschedule_request' ? `<button class="info" onclick="rescheduleBooking('${b.id}')">🔄 Переназначить</button>` : ''}</td></tr>`;
+        });
+        html += `</tbody></table></div>`;
         dashboardDiv.innerHTML = html;
     }
     
@@ -491,25 +525,12 @@
         if (!clientName) return;
         const clientPhone = prompt("Введите телефон клиента:");
         const clientEmail = prompt("Введите email клиента:");
-        
         const response = await fetch(`${API_URL}/api/bookings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                slot_id: slotId,
-                manager_id: currentUser.id,
-                client_name: clientName,
-                client_phone: clientPhone || "",
-                client_email: clientEmail || ""
-            })
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slot_id: slotId, manager_id: currentUser.id, client_name: clientName, client_phone: clientPhone || "", client_email: clientEmail || "" })
         });
-        
-        if (response.ok) {
-            alert("Клиент успешно записан!");
-            loadDashboard();
-        } else {
-            alert("Ошибка записи. Возможно, слот уже занят.");
-        }
+        if (response.ok) { alert("Клиент успешно записан!"); loadDashboard(); }
+        else { alert("Ошибка записи"); }
     };
     
     window.rescheduleBooking = async (bookingId) => {
@@ -519,246 +540,85 @@
         if (!newTime) return;
         const endTime = prompt("Введите новое время окончания (ЧЧ:ММ):");
         if (!endTime) return;
-        
         const response = await fetch(`${API_URL}/api/bookings/reschedule`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                booking_id: bookingId,
-                manager_id: currentUser.id,
-                new_date: newDate,
-                new_start_time: newTime,
-                new_end_time: endTime
-            })
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ booking_id: bookingId, manager_id: currentUser.id, new_date: newDate, new_start_time: newTime, new_end_time: endTime })
         });
-        
-        if (response.ok) {
-            alert("Время успешно переназначено!");
-            loadDashboard();
-        } else {
-            alert("Ошибка переназначения");
-        }
+        if (response.ok) { alert("Время переназначено!"); loadDashboard(); }
+        else { alert("Ошибка"); }
     };
     
-    // ========== ЭКСПЕРТ ==========
     async function loadExpertView() {
         const slotsRes = await fetch(`${API_URL}/api/slots?expert_id=${currentUser.id}`);
         let mySlots = await slotsRes.json();
-        
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=expert&user_id=${currentUser.id}`);
         let myBookings = await bookingsRes.json();
         
-        let html = `
-            <h2>🕐 Мои слоты</h2>
-            <div class="form-group">
-                <input type="date" id="new-slot-date">
-                <input type="time" id="new-slot-start">
-                <input type="time" id="new-slot-end">
-                <button onclick="createSlot()">➕ Добавить слот</button>
-            </div>
-            <table class="data-table"><thead><tr><th>Дата</th><th>Время</th><th>Статус</th><th>Действия</th></tr></thead><tbody>`;
+        let html = `<h2>🕐 Мои слоты</h2><div class="form-group"><input type="date" id="new-slot-date"><input type="time" id="new-slot-start"><input type="time" id="new-slot-end"><button onclick="createSlot()">➕ Добавить слот</button></div><div class="table-wrapper"><table class="data-table"><thead><tr><th>Дата</th><th>Время</th><th>Статус</th><th>Действия</th></tr></thead><tbody>`;
         if (mySlots.length === 0) html += `<tr><td colspan="4">Нет слотов</td></tr>`;
         mySlots.forEach(slot => {
-            html += `<tr id="slot-row-${slot.id}">
-                <td>${slot.date}</td>
-                <td>${slot.start_time} - ${slot.end_time}</td>
-                <td><span class="status ${getStatusClass(slot.status)}">${slot.status}</span></td>
-                <td class="action-buttons">
-                    ${slot.status === 'free' ? `
-                        <button class="warning" onclick="editSlot('${slot.id}', '${slot.date}', '${slot.start_time}', '${slot.end_time}')">✏️ Редактировать</button>
-                        <button class="danger" onclick="deleteSlot('${slot.id}')">🗑 Удалить</button>
-                    ` : '—'}
-                </td>
-            </tr>`;
+            html += `<tr><td>${slot.date}</td><td>${slot.start_time} - ${slot.end_time}</td><td><span class="status ${getStatusClass(slot.status)}">${slot.status}</span></td><td class="action-buttons">${slot.status === 'free' ? `<button class="warning" onclick="editSlot('${slot.id}', '${slot.date}', '${slot.start_time}', '${slot.end_time}')">✏️ Ред</button><button class="danger" onclick="deleteSlot('${slot.id}')">🗑 Уд</button>` : '—'}</td></tr>`;
         });
-        html += `</tbody></table>`;
-        
-        html += `<hr><h2>📋 Записи клиентов</h2>`;
-        if (myBookings.length === 0) html += `<p>Нет записей</p>`;
-        else {
-            html += `<table class="data-table"><thead><tr>
-                <th>Клиент</th><th>Телефон</th><th>Email</th><th>Дата/Время</th><th>Менеджер</th><th>Статус</th><th>Комментарий</th><th>Изменить статус</th>
-            </tr></thead><tbody>`;
-            myBookings.forEach(b => {
-                html += `<tr id="expert-booking-${b.id}">
-                    <td><strong>${b.client_name}</strong></td>
-                    <td>${b.client_phone || '—'}</td>
-                    <td>${b.client_email || '—'}</td>
-                    <td>${b.date} ${b.start_time}</td>
-                    <td>${b.manager_name || '—'}</td>
-                    <td><span class="status ${getStatusClass(b.call_status)}" id="status-badge-${b.id}">${getStatusName(b.call_status)}</span></td>
-                    <td><span id="comment-display-${b.id}">${b.call_comment || '—'}</span></td>
-                    <td>
-                        <select id="status-select-${b.id}" class="status-select" onchange="onStatusChange('${b.id}', this.value)">
-                            <option value="pending" ${b.call_status === 'pending' ? 'selected' : ''}>⏳ Ожидает</option>
-                            <option value="confirmed" ${b.call_status === 'confirmed' ? 'selected' : ''}>✅ Подтверждён</option>
-                            <option value="success" ${b.call_status === 'success' ? 'selected' : ''}>🎉 Созвон успешный</option>
-                            <option value="cancelled_by_client" ${b.call_status === 'cancelled_by_client' ? 'selected' : ''}>❌ Отменён клиентом</option>
-                            <option value="cancelled_by_expert" ${b.call_status === 'cancelled_by_expert' ? 'selected' : ''}>⚠️ Отменён экспертом</option>
-                            <option value="failed" ${b.call_status === 'failed' ? 'selected' : ''}>💔 Созвон не успешный</option>
-                            <option value="reschedule_request" ${b.call_status === 'reschedule_request' ? 'selected' : ''}>🔄 Клиент просил перенести</option>
-                        </select>
-                    </td>
-                </table>`;
-            });
-            html += `</tbody></table>`;
-        }
+        html += `</tbody></table></div><hr><h2>📋 Записи клиентов</h2><div class="table-wrapper"><table class="data-table"><thead><tr><th>Клиент</th><th>Телефон</th><th>Email</th><th>Дата/Время</th><th>Менеджер</th><th>Статус</th><th>Комментарий</th><th>Изменить статус</th></tr></thead><tbody>`;
+        if (myBookings.length === 0) html += `<tr><td colspan="8">Нет записей</td></tr>`;
+        myBookings.forEach(b => {
+            html += `<tr><td><strong>${b.client_name}</strong></td><td>${b.client_phone || '—'}</td><td>${b.client_email || '—'}</td><td>${b.date} ${b.start_time}</td><td>${b.manager_name || '—'}</td><td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td><td>${b.call_comment || '—'}</td><td><select id="status-select-${b.id}" onchange="onStatusChange('${b.id}', this.value)"><option value="pending" ${b.call_status === 'pending' ? 'selected' : ''}>⏳ Ожидает</option><option value="confirmed" ${b.call_status === 'confirmed' ? 'selected' : ''}>✅ Подтверждён</option><option value="success" ${b.call_status === 'success' ? 'selected' : ''}>🎉 Успешный</option><option value="cancelled_by_client" ${b.call_status === 'cancelled_by_client' ? 'selected' : ''}>❌ Отменён клиентом</option><option value="cancelled_by_expert" ${b.call_status === 'cancelled_by_expert' ? 'selected' : ''}>⚠️ Отменён экспертом</option><option value="failed" ${b.call_status === 'failed' ? 'selected' : ''}>💔 Не успешный</option><option value="reschedule_request" ${b.call_status === 'reschedule_request' ? 'selected' : ''}>🔄 Просил перенести</option></select></td></tr>`;
+        });
+        html += `</tbody></table></div>`;
         dashboardDiv.innerHTML = html;
     }
     
-    window.onStatusChange = (bookingId, newStatus) => {
-        showStatusModal(bookingId, newStatus, (success) => {
-            if (success) {
-                console.log('Status updated');
-            }
-        });
-    };
-    
+    window.onStatusChange = (bookingId, newStatus) => { showStatusModal(bookingId, newStatus, () => loadDashboard()); };
     window.createSlot = async () => {
-        const date = document.getElementById('new-slot-date').value;
-        const start = document.getElementById('new-slot-start').value;
-        const end = document.getElementById('new-slot-end').value;
-        
-        if (!date || !start || !end) {
-            alert("Заполните дату, начало и конец");
-            return;
-        }
-        
-        const response = await fetch(`${API_URL}/api/slots`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                expert_id: currentUser.id,
-                date: date,
-                start_time: start,
-                end_time: end
-            })
-        });
-        
-        if (response.ok) {
-            alert("Слот создан");
-            loadDashboard();
-        } else {
-            alert("Ошибка создания слота");
-        }
+        const date = document.getElementById('new-slot-date').value, start = document.getElementById('new-slot-start').value, end = document.getElementById('new-slot-end').value;
+        if (!date || !start || !end) { alert("Заполните дату, начало и конец"); return; }
+        const response = await fetch(`${API_URL}/api/slots`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expert_id: currentUser.id, date, start_time: start, end_time: end }) });
+        if (response.ok) { alert("Слот создан"); loadDashboard(); } else { alert("Ошибка"); }
     };
-    
     window.editSlot = async (slotId, oldDate, oldStart, oldEnd) => {
-        const newDate = prompt("Введите новую дату (ГГГГ-ММ-ДД):", oldDate);
-        if (!newDate) return;
-        const newStart = prompt("Введите новое время начала (ЧЧ:ММ):", oldStart);
-        if (!newStart) return;
-        const newEnd = prompt("Введите новое время окончания (ЧЧ:ММ):", oldEnd);
-        if (!newEnd) return;
-        
-        const response = await fetch(`${API_URL}/api/slots/${slotId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                expert_id: currentUser.id,
-                date: newDate,
-                start_time: newStart,
-                end_time: newEnd
-            })
-        });
-        
-        if (response.ok) {
-            alert("Слот обновлён");
-            loadDashboard();
-        } else {
-            alert("Ошибка обновления слота");
-        }
+        const newDate = prompt("Новая дата (ГГГГ-ММ-ДД):", oldDate); if (!newDate) return;
+        const newStart = prompt("Новое время начала:", oldStart); if (!newStart) return;
+        const newEnd = prompt("Новое время окончания:", oldEnd); if (!newEnd) return;
+        const response = await fetch(`${API_URL}/api/slots/${slotId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expert_id: currentUser.id, date: newDate, start_time: newStart, end_time: newEnd }) });
+        if (response.ok) { alert("Слот обновлён"); loadDashboard(); } else { alert("Ошибка"); }
     };
-    
     window.deleteSlot = async (slotId) => {
         if (!confirm("Удалить этот слот?")) return;
-        
-        const response = await fetch(`${API_URL}/api/slots/${slotId}?expert_id=${currentUser.id}`, {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            alert("Слот удалён");
-            loadDashboard();
-        } else {
-            alert("Ошибка удаления слота");
-        }
+        const response = await fetch(`${API_URL}/api/slots/${slotId}?expert_id=${currentUser.id}`, { method: 'DELETE' });
+        if (response.ok) { alert("Слот удалён"); loadDashboard(); } else { alert("Ошибка"); }
     };
     
-    // ========== АДМИН ==========
     async function loadAdminView() {
-        let html = `
-            <h2>👑 Административная панель</h2>
-            <div class="tabs">
-                <div class="tab ${adminActiveTab === 'slots' ? 'active' : ''}" onclick="switchAdminTab('slots')">📅 Слоты экспертов</div>
-                <div class="tab ${adminActiveTab === 'bookings' ? 'active' : ''}" onclick="switchAdminTab('bookings')">📋 Все записи</div>
-                <div class="tab ${adminActiveTab === 'users' ? 'active' : ''}" onclick="switchAdminTab('users')">👥 Пользователи</div>
-            </div>
-            <div id="admin-tab-content"></div>
-        `;
+        let html = `<h2>👑 Административная панель</h2><div class="tabs"><div class="tab ${adminActiveTab === 'slots' ? 'active' : ''}" onclick="switchAdminTab('slots')">📅 Слоты экспертов</div><div class="tab ${adminActiveTab === 'bookings' ? 'active' : ''}" onclick="switchAdminTab('bookings')">📋 Все записи</div><div class="tab ${adminActiveTab === 'users' ? 'active' : ''}" onclick="switchAdminTab('users')">👥 Пользователи</div></div><div id="admin-tab-content"></div>`;
         dashboardDiv.innerHTML = html;
-        
         if (adminActiveTab === 'slots') await renderAdminSlots();
         else if (adminActiveTab === 'bookings') await renderAdminBookings();
         else if (adminActiveTab === 'users') await renderAdminUsers();
     }
     
-    window.switchAdminTab = (tab) => {
-        adminActiveTab = tab;
-        loadAdminView();
-    };
+    window.switchAdminTab = (tab) => { adminActiveTab = tab; loadAdminView(); };
     
     async function renderAdminSlots() {
-        const usersRes = await fetch(`${API_URL}/api/users`);
-        const allUsers = await usersRes.json();
+        const usersRes = await fetch(`${API_URL}/api/users`), allUsers = await usersRes.json();
         const experts = allUsers.filter(u => u.role === 'expert' && u.is_active !== false);
-        
-        const slotsRes = await fetch(`${API_URL}/api/slots/admin/all`);
-        let allSlots = await slotsRes.json();
-        
-        let html = `
-            <div class="filter-bar">
-                <label>👨‍🏫 Фильтр:</label>
-                <select id="expert-filter">
-                    <option value="all">Все эксперты</option>
-                    ${experts.map(e => `<option value="${e.id}">${e.name}</option>`).join('')}
-                </select>
-                <button onclick="filterSlots()">🔍 Применить</button>
-            </div>
-            <table class="data-table">
-                <thead><tr><th>Эксперт</th><th>Дата</th><th>Время</th><th>Статус</th><th>Клиент</th><th>Телефон</th><th>Email</th><th>Статус созвона</th><th>Комментарий</th><th>Менеджер</th><th>Zoom</th></tr></thead>
-                <tbody id="slots-tbody"></tbody>
-            </table>
-        `;
+        const slotsRes = await fetch(`${API_URL}/api/slots/admin/all`), allSlots = await slotsRes.json();
+        const userMap = {}; allUsers.forEach(u => userMap[u.id] = u);
+        let html = `<div class="filter-bar"><label>Фильтр:</label><select id="expert-filter"><option value="all">Все эксперты</option>${experts.map(e => `<option value="${e.id}">${e.name}</option>`).join('')}</select><button onclick="filterSlots()">Применить</button></div><div class="table-wrapper"><table class="data-table"><thead><tr><th>Эксперт</th><th>Дата</th><th>Время</th><th>Статус</th><th>Клиент</th><th>Телефон</th><th>Email</th><th>Статус созвона</th><th>Комментарий</th><th>Менеджер</th><th>Zoom</th></tr></thead><tbody id="slots-tbody"></tbody></table></div>`;
         document.getElementById('admin-tab-content').innerHTML = html;
         window.adminSlotsData = allSlots;
+        window.userMapAdmin = userMap;
         renderSlotsTable(allSlots);
     }
     
     function renderSlotsTable(slots) {
         const tbody = document.getElementById('slots-tbody');
         if (!tbody) return;
-        if (slots.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="11">Нет слотов</td></tr>';
-            return;
-        }
-        tbody.innerHTML = slots.map(slot => `
-            <tr>
-                <td><strong>${slot.expert_name}</strong><br><span class="text-muted">${slot.expert_email}</span></td>
-                <td>${slot.date}</td>
-                <td>${slot.start_time} - ${slot.end_time}</td>
-                <td><span class="status ${getStatusClass(slot.status)}">${slot.status}</span></td>
-                ${slot.booking ? `
-                    <td>${slot.booking.client_name}</td>
-                    <td>${slot.booking.client_phone || '—'}</td>
-                    <td>${slot.booking.client_email || '—'}</td>
-                    <td><span class="status ${getStatusClass(slot.booking.call_status)}">${getStatusName(slot.booking.call_status)}</span></td>
-                    <td><span class="comment-preview">${slot.booking.call_comment || '—'}</span></td>
-                    <td>${slot.booking.manager_name || '—'}</td>
-                    <td><a href="${slot.booking.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td>
-                ` : '<td colspan="7" class="text-muted">— свободен —</td>'}
-            </tr>
-        `).join('');
+        if (slots.length === 0) { tbody.innerHTML = '<tr><td colspan="11">Нет слотов</td></tr>'; return; }
+        tbody.innerHTML = slots.map(slot => {
+            const expert = window.userMapAdmin?.[slot.expert_id] || {};
+            const expertDisplay = getExpertNameLink({ name: slot.expert_name, portfolio_url: expert.portfolio_url });
+            return `<tr><td>${expertDisplay}<br><span class="text-muted">${slot.expert_email}</span></td><td>${slot.date}</td><td>${slot.start_time} - ${slot.end_time}</td><td><span class="status ${getStatusClass(slot.status)}">${slot.status}</span></td>${slot.booking ? `<td>${slot.booking.client_name}</td><td>${slot.booking.client_phone || '—'}</td><td>${slot.booking.client_email || '—'}</td><td><span class="status ${getStatusClass(slot.booking.call_status)}">${getStatusName(slot.booking.call_status)}</span></td><td>${slot.booking.call_comment || '—'}</td><td>${slot.booking.manager_name || '—'}</td><td><a href="${slot.booking.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td>` : '<td colspan="7" class="text-muted">— свободен —</td>'}</tr>`;
+        }).join('');
     }
     
     window.filterSlots = () => {
@@ -771,65 +631,27 @@
     async function renderAdminBookings() {
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=admin&user_id=${currentUser.id}`);
         const allBookings = await bookingsRes.json();
-        
-        let html = `<table class="data-table">
-            <thead><tr><th>Клиент</th><th>Email</th><th>Телефон</th><th>Эксперт</th><th>Дата/Время</th><th>Менеджер</th><th>Статус созвона</th><th>Комментарий</th><th>Zoom</th></tr></thead>
-            <tbody>`;
+        const usersRes = await fetch(`${API_URL}/api/users`), users = await usersRes.json();
+        const userMap = {}; users.forEach(u => userMap[u.id] = u);
+        let html = `<div class="table-wrapper"><table class="data-table"><thead><tr><th>Клиент</th><th>Email</th><th>Телефон</th><th>Эксперт</th><th>Дата/Время</th><th>Менеджер</th><th>Статус</th><th>Комментарий</th><th>Zoom</th></tr></thead><tbody>`;
         if (allBookings.length === 0) html += `<tr><td colspan="9">Нет записей</td></tr>`;
         allBookings.forEach(b => {
-            html += `<tr>
-                <td><strong>${b.client_name}</strong></td>
-                <td>${b.client_email || '—'}</td>
-                <td>${b.client_phone || '—'}</td>
-                <td>${b.expert_name}</td>
-                <td>${b.date} ${b.start_time}</td>
-                <td>${b.manager_name || '—'}</td>
-                <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td>
-                <td><span class="comment-preview">${b.call_comment || '—'}</span></td>
-                <td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td>
-            </tr>`;
+            const expertDisplay = getExpertNameLink({ name: b.expert_name, portfolio_url: (userMap[b.expert_id] || {}).portfolio_url });
+            html += `<tr><td><strong>${b.client_name}</strong></td><td>${b.client_email || '—'}</td><td>${b.client_phone || '—'}</td><td>${expertDisplay}</td><td>${b.date} ${b.start_time}</td><td>${b.manager_name || '—'}</td><td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td><td>${b.call_comment || '—'}</td><td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td></tr>`;
         });
-        html += `</tbody></table>`;
+        html += `</tbody></table></div>`;
         document.getElementById('admin-tab-content').innerHTML = html;
     }
     
     async function renderAdminUsers() {
-        const usersRes = await fetch(`${API_URL}/api/users`);
-        let allUsers = await usersRes.json();
-        
-        let html = `
-            <div style="background: rgba(255,255,255,0.05); border-radius: 0.75rem; overflow-x: auto;">
-                <div class="users-header users-table">
-                    <div>Имя</div><div>Email</div><div>Роль</div><div>Статус</div><div>Действия</div><div>Удалить</div>
-                </div>
-                <div id="users-list"></div>
-            </div>
-            <p class="text-muted" style="margin-top: 1rem;">⚠️ Нельзя удалить или изменить роль последнего администратора.</p>
-        `;
+        const usersRes = await fetch(`${API_URL}/api/users`), allUsers = await usersRes.json();
+        let html = `<div style="overflow-x:auto;"><div class="users-header users-table"><div>Имя</div><div>Email</div><div>Роль</div><div>Статус</div><div>Действия</div><div>Удалить</div></div><div id="users-list"></div></div><p class="text-muted" style="margin-top: 12px;">⚠️ Нельзя удалить последнего администратора.</p>`;
         document.getElementById('admin-tab-content').innerHTML = html;
-        
         const container = document.getElementById('users-list');
         container.innerHTML = allUsers.map(user => {
             const isActive = user.is_active !== false;
-            return `
-                <div class="users-table" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <div>${escapeHtml(user.name)}</div>
-                    <div>${escapeHtml(user.email)}</div>
-                    <div>
-                        <select class="role-select-${user.id}" ${user.id === currentUser.id ? 'disabled' : ''}>
-                            <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Менеджер</option>
-                            <option value="expert" ${user.role === 'expert' ? 'selected' : ''}>Эксперт</option>
-                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Админ</option>
-                        </select>
-                    </div>
-                    <div class="${isActive ? 'user-active' : 'user-inactive'}">${isActive ? 'Активен' : 'Заблокирован'}</div>
-                    <div>
-                        <button class="secondary" onclick="updateUser('${user.id}')">💾 Сохранить</button>
-                        <button class="warning" onclick="toggleBlockUser('${user.id}', ${!isActive})">${isActive ? '🔒 Блок' : '🔓 Разблок'}</button>
-                    </div>
-                    <div>${user.id !== currentUser.id ? `<button class="danger" onclick="deleteUser('${user.id}')">🗑 Удалить</button>` : '<span class="badge">Вы</span>'}</div>
-                </div>
-            `;
+            const portfolioField = user.role === 'expert' ? `<div><input type="text" id="portfolio-${user.id}" value="${user.portfolio_url || ''}" placeholder="Ссылка на визитку" style="width:100%;"></div>` : '';
+            return `<div class="users-table" style="border-bottom:1px solid rgba(255,255,255,0.05);"><div>${escapeHtml(user.name)}</div><div>${escapeHtml(user.email)}</div><div><select class="role-select-${user.id}" ${user.id === currentUser.id ? 'disabled' : ''}><option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Менеджер</option><option value="expert" ${user.role === 'expert' ? 'selected' : ''}>Эксперт</option><option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Админ</option></select>${portfolioField}</div><div class="${isActive ? 'user-active' : 'user-inactive'}">${isActive ? 'Активен' : 'Заблокирован'}</div><div><button class="secondary" onclick="updateUser('${user.id}')">💾 Сохранить</button><button class="warning" onclick="toggleBlockUser('${user.id}', ${!isActive})">${isActive ? '🔒 Блок' : '🔓 Разблок'}</button></div><div>${user.id !== currentUser.id ? `<button class="danger" onclick="deleteUser('${user.id}')">🗑 Удалить</button>` : '<span class="badge">Вы</span>'}</div></div>`;
         }).join('');
     }
     
@@ -837,78 +659,27 @@
         const select = document.querySelector(`.role-select-${userId}`);
         if (!select) return;
         const newRole = select.value;
+        const portfolioInput = document.getElementById(`portfolio-${userId}`);
+        const portfolioUrl = portfolioInput ? portfolioInput.value : "";
         if (!confirm(`Изменить роль пользователя на "${newRole}"?`)) return;
-        
-        const response = await fetch(`${API_URL}/api/users`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, role: newRole })
-        });
-        
-        if (response.ok) {
-            alert("Роль обновлена!");
-            renderAdminUsers();
-        } else {
-            const error = await response.json();
-            alert(error.detail || "Ошибка");
-        }
+        const response = await fetch(`${API_URL}/api/users`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId, role: newRole, portfolio_url: portfolioUrl }) });
+        if (response.ok) { alert("Обновлено!"); renderAdminUsers(); } else { const error = await response.json(); alert(error.detail || "Ошибка"); }
     };
     
     window.toggleBlockUser = async (userId, unblock) => {
-        const action = unblock ? 'разблокировать' : 'заблокировать';
-        if (!confirm(`Вы уверены, что хотите ${action} этого пользователя?`)) return;
-        
-        const response = await fetch(`${API_URL}/api/users`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, is_active: unblock })
-        });
-        
-        if (response.ok) {
-            alert(unblock ? "Пользователь разблокирован" : "Пользователь заблокирован");
-            renderAdminUsers();
-        } else {
-            const error = await response.json();
-            alert(error.detail || "Ошибка");
-        }
+        if (!confirm(`Вы уверены?`)) return;
+        const response = await fetch(`${API_URL}/api/users`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId, is_active: unblock }) });
+        if (response.ok) { alert(unblock ? "Разблокирован" : "Заблокирован"); renderAdminUsers(); } else { const error = await response.json(); alert(error.detail || "Ошибка"); }
     };
     
     window.deleteUser = async (userId) => {
-        if (!confirm(`Удалить пользователя? Все его слоты будут удалены.`)) return;
-        
-        const response = await fetch(`${API_URL}/api/users/${userId}`, {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            alert("Пользователь удалён");
-            if (currentUser && currentUser.id === userId) {
-                clearStorage();
-                location.reload();
-            } else {
-                renderAdminUsers();
-            }
-        } else {
-            const error = await response.json();
-            alert(error.detail || "Ошибка удаления");
-        }
+        if (!confirm(`Удалить пользователя?`)) return;
+        const response = await fetch(`${API_URL}/api/users/${userId}`, { method: 'DELETE' });
+        if (response.ok) { alert("Удалён"); if (currentUser && currentUser.id === userId) { clearStorage(); location.reload(); } else { renderAdminUsers(); } } else { const error = await response.json(); alert(error.detail || "Ошибка"); }
     };
     
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-    
-    // При загрузке проверяем email в поле ввода
-    document.getElementById('user-email').addEventListener('input', (e) => {
-        checkAdminAccess(e.target.value);
-    });
-    
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+    document.getElementById('user-email').addEventListener('input', (e) => checkAdminAccess(e.target.value));
     loadFromStorage();
 </script>
 </body>
