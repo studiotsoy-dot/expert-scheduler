@@ -25,13 +25,8 @@ DATABASE = {
 
 # Статусы созвона
 CALL_STATUSES = [
-    "pending",           # ожидает подтверждения
-    "confirmed",         # подтверждён
-    "success",           # созвон успешный
-    "cancelled_by_client",  # отменился клиентом
-    "cancelled_by_expert",  # отменился экспертом
-    "failed",            # созвон не успешный
-    "reschedule_request" # клиент просил другие дату/время
+    "pending", "confirmed", "success", "cancelled_by_client",
+    "cancelled_by_expert", "failed", "reschedule_request"
 ]
 
 STATUS_NAMES = {
@@ -44,12 +39,12 @@ STATUS_NAMES = {
     "reschedule_request": "🔄 Клиент просил перенести"
 }
 
-# Модели
+# ========== МОДЕЛИ ==========
 class UserCreate(BaseModel):
     name: str
     email: str
     role: str
-    portfolio_url: Optional[str] = None  # ДОБАВИТЬ ЭТУ СТРОКУ
+    portfolio_url: Optional[str] = None
 
 class UserUpdate(BaseModel):
     user_id: str
@@ -109,7 +104,7 @@ def create_user(user: UserCreate):
         "name": user.name,
         "email": user.email,
         "role": user.role,
-        "portfolio_url": user.portfolio_url or "",  # ДОБАВИТЬ ЭТУ СТРОКУ
+        "portfolio_url": user.portfolio_url or "",
         "is_active": True,
         "created_at": datetime.now().isoformat()
     }
@@ -125,16 +120,16 @@ def update_user(update: UserUpdate):
         raise HTTPException(status_code=404, detail="User not found")
     
     user = DATABASE["users"][update.user_id]
-    if update.name:
+    if update.name is not None:
         user["name"] = update.name
-    if update.role:
+    if update.role is not None:
         if update.role not in ["admin", "expert", "manager"]:
             raise HTTPException(status_code=400, detail="Invalid role")
         user["role"] = update.role
     if update.is_active is not None:
         user["is_active"] = update.is_active
     if update.portfolio_url is not None:
-        user["portfolio_url"] = update.portfolio_url    
+        user["portfolio_url"] = update.portfolio_url
     
     DATABASE["users"][update.user_id] = user
     return user
@@ -155,6 +150,13 @@ def delete_user(user_id: str):
     
     del DATABASE["users"][user_id]
     return {"status": "deleted"}
+
+@app.get("/api/users/role/{email}")
+def get_user_role(email: str):
+    for user in DATABASE["users"].values():
+        if user["email"] == email:
+            return {"role": user["role"], "is_active": user.get("is_active", True)}
+    return {"role": None, "is_active": False}
 
 # ========== SLOTS ==========
 @app.post("/api/slots")
@@ -185,8 +187,39 @@ def get_free_slots():
         expert = DATABASE["users"].get(slot["expert_id"])
         if expert and expert.get("is_active", True):
             slot["expert_name"] = expert["name"] if expert else "Unknown"
+            slot["expert_portfolio"] = expert.get("portfolio_url", "")
             result.append(slot)
     return result
+
+@app.put("/api/slots/{slot_id}")
+def update_slot(slot_id: str, slot: SlotCreate):
+    if slot_id not in DATABASE["slots"]:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    existing_slot = DATABASE["slots"][slot_id]
+    if existing_slot["expert_id"] != slot.expert_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if existing_slot["status"] != "free":
+        raise HTTPException(status_code=400, detail="Cannot edit booked or confirmed slot")
+    
+    existing_slot["date"] = slot.date
+    existing_slot["start_time"] = slot.start_time
+    existing_slot["end_time"] = slot.end_time
+    return existing_slot
+
+@app.delete("/api/slots/{slot_id}")
+def delete_slot(slot_id: str, expert_id: str):
+    if slot_id not in DATABASE["slots"]:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    slot = DATABASE["slots"][slot_id]
+    if slot["expert_id"] != expert_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if slot["status"] != "free":
+        raise HTTPException(status_code=400, detail="Cannot delete booked or confirmed slot")
+    
+    del DATABASE["slots"][slot_id]
+    return {"status": "deleted"}
 
 @app.get("/api/slots/admin/all")
 def get_all_slots_with_experts():
@@ -198,7 +231,7 @@ def get_all_slots_with_experts():
         slot_copy = slot.copy()
         slot_copy["expert_name"] = expert["name"] if expert else "Unknown"
         slot_copy["expert_email"] = expert["email"] if expert else "Unknown"
-        slot_copy["expert_portfolio"] = expert.get("portfolio_url", "")  # <-- ДОБАВИТЬ ЭТУ СТРОКУ
+        slot_copy["expert_portfolio"] = expert.get("portfolio_url", "")
         
         booking = None
         for b in DATABASE["bookings"].values():
@@ -228,7 +261,6 @@ def create_booking(booking: BookingCreate):
     
     if booking.slot_id not in DATABASE["slots"]:
         raise HTTPException(status_code=404, detail="Slot not found")
-    
     if DATABASE["slots"][booking.slot_id]["status"] != "free":
         raise HTTPException(status_code=400, detail="Slot already booked")
     
@@ -246,9 +278,7 @@ def create_booking(booking: BookingCreate):
         "created_at": datetime.now().isoformat(),
         "status_history": [{"status": "pending", "comment": "", "changed_by": booking.manager_id, "changed_at": datetime.now().isoformat()}]
     }
-    
     DATABASE["slots"][booking.slot_id]["status"] = "booked"
-    
     return {"id": booking_id, "zoom_link": zoom_link, "status": "pending"}
 
 @app.post("/api/bookings/confirm")
@@ -258,7 +288,6 @@ def confirm_booking(data: ConfirmBooking):
     
     booking = DATABASE["bookings"][data.booking_id]
     slot = DATABASE["slots"][booking["slot_id"]]
-    
     if slot["expert_id"] != data.expert_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -269,12 +298,8 @@ def confirm_booking(data: ConfirmBooking):
     if "status_history" not in booking:
         booking["status_history"] = []
     booking["status_history"].append({
-        "status": "confirmed", 
-        "comment": "", 
-        "changed_by": data.expert_id, 
-        "changed_at": datetime.now().isoformat()
+        "status": "confirmed", "comment": "", "changed_by": data.expert_id, "changed_at": datetime.now().isoformat()
     })
-    
     return {"status": "confirmed"}
 
 @app.post("/api/bookings/update-status")
@@ -284,27 +309,19 @@ def update_booking_status(update: UpdateBookingStatus):
     
     booking = DATABASE["bookings"][update.booking_id]
     slot = DATABASE["slots"][booking["slot_id"]]
-    
     if slot["expert_id"] != update.expert_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    
     if update.status not in CALL_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid status")
     
-    old_status = booking.get("call_status", "pending")
     booking["call_status"] = update.status
     booking["call_comment"] = update.comment or ""
     
     if "status_history" not in booking:
         booking["status_history"] = []
     booking["status_history"].append({
-        "status": update.status,
-        "comment": update.comment,
-        "changed_by": update.expert_id,
-        "changed_at": datetime.now().isoformat(),
-        "old_status": old_status
+        "status": update.status, "comment": update.comment, "changed_by": update.expert_id, "changed_at": datetime.now().isoformat()
     })
-    
     return {"status": update.status, "comment": update.comment}
 
 @app.post("/api/bookings/reschedule")
@@ -313,58 +330,33 @@ def reschedule_booking(reschedule: RescheduleBooking):
         raise HTTPException(status_code=404, detail="Booking not found")
     
     booking = DATABASE["bookings"][reschedule.booking_id]
-    old_slot_id = booking["slot_id"]
-    old_slot = DATABASE["slots"][old_slot_id]
+    old_slot = DATABASE["slots"][booking["slot_id"]]
     
-    # Создаём новый слот
     new_slot_id = str(uuid.uuid4())
     DATABASE["slots"][new_slot_id] = {
-        "id": new_slot_id,
-        "expert_id": old_slot["expert_id"],
-        "date": reschedule.new_date,
-        "start_time": reschedule.new_start_time,
-        "end_time": reschedule.new_end_time,
-        "status": "booked"
+        "id": new_slot_id, "expert_id": old_slot["expert_id"],
+        "date": reschedule.new_date, "start_time": reschedule.new_start_time,
+        "end_time": reschedule.new_end_time, "status": "booked"
     }
-    
-    # Обновляем бронирование
-    old_slot_id_for_history = booking["slot_id"]
     booking["slot_id"] = new_slot_id
     booking["call_status"] = "pending"
     booking["status"] = "pending"
-    
-    # Освобождаем старый слот
-    DATABASE["slots"][old_slot_id]["status"] = "free"
+    DATABASE["slots"][booking["slot_id"]]["status"] = "free"
     
     if "status_history" not in booking:
         booking["status_history"] = []
     booking["status_history"].append({
-        "action": "rescheduled",
-        "from_slot": old_slot_id_for_history,
-        "to_slot": new_slot_id,
-        "changed_by": reschedule.manager_id,
-        "changed_at": datetime.now().isoformat(),
-        "new_date": reschedule.new_date,
-        "new_time": f"{reschedule.new_start_time} - {reschedule.new_end_time}"
+        "action": "rescheduled", "changed_by": reschedule.manager_id, "changed_at": datetime.now().isoformat(),
+        "new_date": reschedule.new_date, "new_time": f"{reschedule.new_start_time} - {reschedule.new_end_time}"
     })
-    
-    return {
-        "new_slot_id": new_slot_id, 
-        "date": reschedule.new_date, 
-        "start_time": reschedule.new_start_time,
-        "end_time": reschedule.new_end_time
-    }
+    return {"new_slot_id": new_slot_id, "date": reschedule.new_date, "start_time": reschedule.new_start_time, "end_time": reschedule.new_end_time}
 
 @app.get("/api/bookings")
 def get_bookings(role: str, user_id: str):
     bookings = []
     for b in DATABASE["bookings"].values():
         slot = DATABASE["slots"].get(b["slot_id"])
-        if not slot:
-            continue
-        expert = DATABASE["users"].get(slot["expert_id"])
-        manager = DATABASE["users"].get(b["manager_id"])
-        
+        if not slot: continue
         if role == "admin":
             bookings.append(b)
         elif role == "manager" and b["manager_id"] == user_id:
@@ -378,23 +370,14 @@ def get_bookings(role: str, user_id: str):
         expert = DATABASE["users"].get(slot["expert_id"])
         manager = DATABASE["users"].get(b["manager_id"])
         result.append({
-            "id": b["id"],
-            "client_name": b["client_name"],
-            "client_phone": b["client_phone"],
-            "client_email": b["client_email"],
-            "status": b["status"],
-            "call_status": b.get("call_status", "pending"),
-            "call_comment": b.get("call_comment", ""),
-            "zoom_link": b["zoom_link"],
-            "created_at": b["created_at"],
-            "date": slot["date"],
-            "start_time": slot["start_time"],
-            "end_time": slot["end_time"],
-            "expert_name": expert["name"] if expert else "Unknown",
-            "expert_id": slot["expert_id"],
-            "expert_portfolio": expert.get("portfolio_url", ""),  # <-- ДОБАВИТЬ ЭТУ СТРОКУ
-            "manager_name": manager["name"] if manager else "Unknown",
-            "status_history": b.get("status_history", [])
+            "id": b["id"], "client_name": b["client_name"], "client_phone": b["client_phone"],
+            "client_email": b["client_email"], "status": b["status"],
+            "call_status": b.get("call_status", "pending"), "call_comment": b.get("call_comment", ""),
+            "zoom_link": b["zoom_link"], "created_at": b["created_at"],
+            "date": slot["date"], "start_time": slot["start_time"], "end_time": slot["end_time"],
+            "expert_name": expert["name"] if expert else "Unknown", "expert_id": slot["expert_id"],
+            "expert_portfolio": expert.get("portfolio_url", ""),
+            "manager_name": manager["name"] if manager else "Unknown"
         })
     return result
 
@@ -410,44 +393,6 @@ def root():
 @app.get("/index.html")
 def index():
     return FileResponse("index.html")
-
-# ========== УПРАВЛЕНИЕ СЛОТАМИ ДЛЯ ЭКСПЕРТА ==========
-@app.put("/api/slots/{slot_id}")
-def update_slot(slot_id: str, slot: SlotCreate):
-    if slot_id not in DATABASE["slots"]:
-        raise HTTPException(status_code=404, detail="Slot not found")
-    
-    existing_slot = DATABASE["slots"][slot_id]
-    
-    # Проверяем, что слот принадлежит эксперту
-    if existing_slot["expert_id"] != slot.expert_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    # Проверяем, что слот свободен (можно редактировать только free)
-    if existing_slot["status"] != "free":
-        raise HTTPException(status_code=400, detail="Cannot edit booked or confirmed slot")
-    
-    existing_slot["date"] = slot.date
-    existing_slot["start_time"] = slot.start_time
-    existing_slot["end_time"] = slot.end_time
-    
-    return existing_slot
-
-@app.delete("/api/slots/{slot_id}")
-def delete_slot(slot_id: str, expert_id: str):
-    if slot_id not in DATABASE["slots"]:
-        raise HTTPException(status_code=404, detail="Slot not found")
-    
-    slot = DATABASE["slots"][slot_id]
-    
-    if slot["expert_id"] != expert_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    if slot["status"] != "free":
-        raise HTTPException(status_code=400, detail="Cannot delete booked or confirmed slot")
-    
-    del DATABASE["slots"][slot_id]
-    return {"status": "deleted"}
 
 if __name__ == "__main__":
     import uvicorn
