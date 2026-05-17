@@ -461,7 +461,7 @@
     // ========== МЕНЕДЖЕР ==========
     async function loadManagerView() {
         const slotsRes = await fetch(`${API_URL}/api/slots/free`);
-        const freeSlots = await slotsRes.json();
+        let freeSlots = await slotsRes.json();
         
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=manager&user_id=${currentUser.id}`);
         let myBookings = await bookingsRes.json();
