@@ -94,8 +94,9 @@ def generate_zoom_link():
 # ========== USERS ==========
 @app.post("/api/users")
 def create_user(user: UserCreate):
+    email_lower = user.email.lower()  # Приводим email к нижнему регистру
     for existing in DATABASE["users"].values():
-        if existing["email"] == user.email:
+        if existing["email"].lower() == email_lower:  # Сравниваем в нижнем регистре
             if existing.get("is_active", True):
                 if existing["role"] != user.role:
                     raise HTTPException(status_code=403, detail="Эта почта уже зарегистрирована с другой ролью")
@@ -107,7 +108,7 @@ def create_user(user: UserCreate):
     DATABASE["users"][user_id] = {
         "id": user_id,
         "name": user.name,
-        "email": user.email,
+        "email": email_lower,  # Сохраняем в нижнем регистре
         "role": user.role,
         "portfolio_url": user.portfolio_url or "",
         "is_active": True,
