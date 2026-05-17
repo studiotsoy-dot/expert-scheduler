@@ -491,11 +491,11 @@
                     <td>${b.client_email || '—'}</td>
                     <td>${b.client_phone || '—'}</td>
                     <td>${expertDisplay}${b.expert_name}
-                    <td>${b.date} ${b.start_time}${b.expert_name}
-                    <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span>${b.expert_name}
-                    <td><span class="comment-preview">${b.call_comment || '—'}</span>${b.expert_name}
-                    <td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a>${b.expert_name}
-                    <td>${b.call_status === 'reschedule_request' ? `<button class="info" onclick="rescheduleBooking('${b.id}')">🔄 Переназначить</button>` : ''}${b.expert_name}
+                    <td>${b.date} ${b.start_time}
+                    <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span>
+                    <td><span class="comment-preview">${b.call_comment || '—'}</span>
+                    <td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a>
+                    <td>${b.call_status === 'reschedule_request' ? `<button class="info" onclick="rescheduleBooking('${b.id}')">🔄 Переназначить</button>` : ''}
                 </tr>`;
             });
             html += `</tbody></table>`;
