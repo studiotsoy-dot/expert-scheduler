@@ -75,6 +75,11 @@
             border-radius: 0.5rem;
             color: #f1f5f9;
         }
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
         select option {
             background: #1e293b;
             color: #f1f5f9;
@@ -806,46 +811,52 @@
     }
     
     async function renderAdminUsers() {
-        const usersRes = await fetch(`${API_URL}/api/users`);
-        let allUsers = await usersRes.json();
-        
-        let html = `
-            <div style="background: rgba(255,255,255,0.05); border-radius: 0.75rem; overflow-x: auto;">
-                <div class="users-header users-table">
-                    <div>Имя</div><div>Email</div><div>Роль</div><div>Статус</div><div>Действия</div><div>Удалить</div>
-                </div>
-                <div id="users-list"></div>
-            </div>
-            <p class="text-muted" style="margin-top: 1rem;">⚠️ Нельзя удалить или изменить роль последнего администратора.</p>
+    const usersRes = await fetch(`${API_URL}/api/users`);
+    let allUsers = await usersRes.json();
+    
+    let html = `
+        <div style="overflow-x: auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Имя</th><th>Email</th><th>Роль</th><th>Статус</th><th>Визитка</th><th>Действия</th><th>Удалить</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
+        </div>
+        <p class="text-muted" style="margin-top: 1rem;">⚠️ Нельзя удалить или изменить роль последнего администратора.</p>
+    `;
+    document.getElementById('admin-tab-content').innerHTML = html;
+    
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = allUsers.map(user => {
+        const isActive = user.is_active !== false;
+        const portfolioField = user.role === 'expert' 
+            ? `<input type="text" id="portfolio-${user.id}" value="${user.portfolio_url || ''}" placeholder="Ссылка на визитку" style="width:150px;">` 
+            : '—';
+        return `
+            <tr>
+                <td>${escapeHtml(user.name)}</td>
+                <td>${escapeHtml(user.email)}</td>
+                <td>
+                    <select class="role-select-${user.id}" ${user.id === currentUser.id ? 'disabled' : ''}>
+                        <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Менеджер</option>
+                        <option value="expert" ${user.role === 'expert' ? 'selected' : ''}>Эксперт</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Админ</option>
+                    </select>
+                </td>
+                <td class="${isActive ? 'user-active' : 'user-inactive'}">${isActive ? 'Активен' : 'Заблокирован'}</td>
+                <td>${portfolioField}</td>
+                <td>
+                    <button class="secondary" onclick="updateUser('${user.id}')">💾 Сохранить</button>
+                    <button class="warning" onclick="toggleBlockUser('${user.id}', ${!isActive})">${isActive ? '🔒 Блок' : '🔓 Разблок'}</button>
+                </td>
+                <td>${user.id !== currentUser.id ? `<button class="danger" onclick="deleteUser('${user.id}')">🗑 Удалить</button>` : '<span class="badge">Вы</span>'}</td>
+            </tr>
         `;
-        document.getElementById('admin-tab-content').innerHTML = html;
-        
-        const container = document.getElementById('users-list');
-        container.innerHTML = allUsers.map(user => {
-          const isActive = user.is_active !== false;
-          const portfolioField = user.role === 'expert' ? `<div><input type="text" id="portfolio-${user.id}" value="${user.portfolio_url || ''}" placeholder="Ссылка на визитку" style="width:100%;"></div>` : '<div>—</div>';
-          return `
-              <div class="users-table" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                 <div>${escapeHtml(user.name)}</div>
-                 <div>${escapeHtml(user.email)}</div>
-                 <div>
-                   <select class="role-select-${user.id}" ${user.id === currentUser.id ? 'disabled' : ''}>
-                    <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Менеджер</option>
-                    <option value="expert" ${user.role === 'expert' ? 'selected' : ''}>Эксперт</option>
-                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Админ</option>
-                   </select>
-                 </div>
-                 <div class="${isActive ? 'user-active' : 'user-inactive'}">${isActive ? 'Активен' : 'Заблокирован'}</div>
-                 ${portfolioField}
-                 <div>
-                   <button class="secondary" onclick="updateUser('${user.id}')">💾 Сохранить</button>
-                   <button class="warning" onclick="toggleBlockUser('${user.id}', ${!isActive})">${isActive ? '🔒 Блок' : '🔓 Разблок'}</button>
-                 </div>
-                 <div>${user.id !== currentUser.id ? `<button class="danger" onclick="deleteUser('${user.id}')">🗑 Удалить</button>` : '<span class="badge">Вы</span>'}</div>
-             </div>
-          `;
-      }).join('');
-    }
+    }).join('');
+}
     
     window.updateUser = async (userId) => {
        const select = document.querySelector(`.role-select-${userId}`);
