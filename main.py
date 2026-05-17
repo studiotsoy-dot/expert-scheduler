@@ -134,8 +134,8 @@ def update_user(update: UserUpdate):
     if update.is_active is not None:
         user["is_active"] = update.is_active
     if update.portfolio_url is not None:
-    user["portfolio_url"] = update.portfolio_url
-      
+        user["portfolio_url"] = update.portfolio_url
+    
     DATABASE["users"][update.user_id] = user
     return user
 
