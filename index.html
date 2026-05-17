@@ -438,7 +438,13 @@
             if (callback) callback(false);
         }
     });
-    
+    function sortByDateTime(items, dateField = 'date', timeField = 'start_time') {
+        return items.sort((a, b) => {
+            const dateA = new Date(`${a[dateField]} ${a[timeField]}`);
+            const dateB = new Date(`${b[dateField]} ${b[timeField]}`);
+            return dateA - dateB;
+        });
+    }    
     async function loadDashboard() {
         if (!currentUser) return;
         await loadStatuses();
@@ -459,6 +465,11 @@
         
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=manager&user_id=${currentUser.id}`);
         let myBookings = await bookingsRes.json();
+
+        // Сортируем свободные слоты
+        freeSlots = sortByDateTime(freeSlots, 'date', 'start_time');
+        // Сортируем записи менеджера
+        myBookings = sortByDateTime(myBookings, 'date', 'start_time');
         
         let html = `<h2>📅 Свободные слоты</h2>`;
         if (freeSlots.length === 0) html += `<p>Нет свободных слотов</p>`;
@@ -490,7 +501,7 @@
                     <td><strong>${b.client_name}</strong></td>
                     <td>${b.client_email || '—'}</td>
                     <td>${b.client_phone || '—'}</td>
-                    <td>${expertDisplay}${b.expert_name}
+                    <td>${expertDisplay}
                     <td>${b.date} ${b.start_time}
                     <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span>
                     <td><span class="comment-preview">${b.call_comment || '—'}</span>
@@ -564,6 +575,11 @@
         
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=expert&user_id=${currentUser.id}`);
         let myBookings = await bookingsRes.json();
+
+        // Сортируем слоты по дате и времени
+        mySlots = sortByDateTime(mySlots, 'date', 'start_time');
+        // Сортируем записи клиентов по дате и времени
+        myBookings = sortByDateTime(myBookings, 'date', 'start_time');
         
         let html = `
             <h2>🕐 Мои слоты</h2>
@@ -732,6 +748,9 @@
         
         const slotsRes = await fetch(`${API_URL}/api/slots/admin/all`);
         let allSlots = await slotsRes.json();
+
+        // Сортируем слоты экспертов
+        allSlots = sortByDateTime(allSlots, 'date', 'start_time');
         
         let html = `
             <div class="filter-bar">
@@ -787,7 +806,13 @@
     
     async function renderAdminBookings() {
         const bookingsRes = await fetch(`${API_URL}/api/bookings?role=admin&user_id=${currentUser.id}`);
-        const allBookings = await bookingsRes.json();
+        let allBookings = await bookingsRes.json();
+
+        // Сортируем все записи
+        allBookings = sortByDateTime(allBookings, 'date', 'start_time');
+
+// Сортируем все записи
+allBookings = sortByDateTime(allBookings, 'date', 'start_time');
         
         let html = `<table class="data-table">
             <thead><tr><th>Клиент</th><th>Email</th><th>Телефон</th><th>Эксперт</th><th>Дата/Время</th><th>Менеджер</th><th>Статус созвона</th><th>Комментарий</th><th>Zoom</th></tr></thead>
