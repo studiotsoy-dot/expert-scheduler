@@ -49,12 +49,14 @@ class UserCreate(BaseModel):
     name: str
     email: str
     role: str
+    portfolio_url: Optional[str] = None
 
 class UserUpdate(BaseModel):
     user_id: str
     name: Optional[str] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
+    portfolio_url: Optional[str] = None
 
 class SlotCreate(BaseModel):
     expert_id: str
@@ -107,6 +109,7 @@ def create_user(user: UserCreate):
         "name": user.name,
         "email": user.email,
         "role": user.role,
+        "portfolio_url": user.portfolio_url or "",
         "is_active": True,
         "created_at": datetime.now().isoformat()
     }
@@ -130,7 +133,9 @@ def update_user(update: UserUpdate):
         user["role"] = update.role
     if update.is_active is not None:
         user["is_active"] = update.is_active
-    
+    if update.portfolio_url is not None:
+    user["portfolio_url"] = update.portfolio_url
+      
     DATABASE["users"][update.user_id] = user
     return user
 
@@ -180,6 +185,7 @@ def get_free_slots():
         expert = DATABASE["users"].get(slot["expert_id"])
         if expert and expert.get("is_active", True):
             slot["expert_name"] = expert["name"] if expert else "Unknown"
+            slot["expert_portfolio"] = expert.get("portfolio_url", "")
             result.append(slot)
     return result
 
@@ -386,6 +392,7 @@ def get_bookings(role: str, user_id: str):
             "end_time": slot["end_time"],
             "expert_name": expert["name"] if expert else "Unknown",
             "expert_id": slot["expert_id"],
+            "expert_portfolio": expert.get("portfolio_url", ""),
             "manager_name": manager["name"] if manager else "Unknown",
             "status_history": b.get("status_history", [])
         })
