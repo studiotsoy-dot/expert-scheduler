@@ -490,13 +490,13 @@
                     <td><strong>${b.client_name}</strong></td>
                     <td>${b.client_email || '—'}</td>
                     <td>${b.client_phone || '—'}</td>
-                    <td>${b.expert_name}</td>
-                    <td>${b.date} ${b.start_time}</td>
-                    <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td>
-                    <td><span class="comment-preview">${b.call_comment || '—'}</span></td>
-                    <td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a></td>
-                    <td>${b.call_status === 'reschedule_request' ? `<button class="info" onclick="rescheduleBooking('${b.id}')">🔄 Переназначить</button>` : ''}</td>
-                </table>`;
+                    <td>${expertDisplay}${b.expert_name}
+                    <td>${b.date} ${b.start_time}${b.expert_name}
+                    <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span>${b.expert_name}
+                    <td><span class="comment-preview">${b.call_comment || '—'}</span>${b.expert_name}
+                    <td><a href="${b.zoom_link}" target="_blank" class="zoom-link">🔗 Zoom</a>${b.expert_name}
+                    <td>${b.call_status === 'reschedule_request' ? `<button class="info" onclick="rescheduleBooking('${b.id}')">🔄 Переназначить</button>` : ''}${b.expert_name}
+                </tr>`;
             });
             html += `</tbody></table>`;
         }
@@ -603,10 +603,10 @@
                     <td>${b.client_email || '—'}</td>
                     <td>${b.date} ${b.start_time}</td>
                     <td>${b.manager_name || '—'}</td>
-                    <td><span class="status ${getStatusClass(b.call_status)}" id="status-badge-${b.id}">${getStatusName(b.call_status)}</span></td>
-                    <td><span id="comment-display-${b.id}">${b.call_comment || '—'}</span></td>
+                    <td><span class="status ${getStatusClass(b.call_status)}">${getStatusName(b.call_status)}</span></td>
+                    <td>${b.call_comment || '—'}</td>
                     <td>
-                        <select id="status-select-${b.id}" class="status-select" onchange="onStatusChange('${b.id}', this.value)">
+                        <select id="status-select-${b.id}" onchange="onStatusChange('${b.id}', this.value)">
                             <option value="pending" ${b.call_status === 'pending' ? 'selected' : ''}>⏳ Ожидает</option>
                             <option value="confirmed" ${b.call_status === 'confirmed' ? 'selected' : ''}>✅ Подтверждён</option>
                             <option value="success" ${b.call_status === 'success' ? 'selected' : ''}>🎉 Созвон успешный</option>
@@ -616,8 +616,8 @@
                             <option value="reschedule_request" ${b.call_status === 'reschedule_request' ? 'selected' : ''}>🔄 Клиент просил перенести</option>
                         </select>
                     </td>
-                </table>`;
-            });
+                </tr>`;
+            });   
             html += `</tbody></table>`;
         }
         dashboardDiv.innerHTML = html;
