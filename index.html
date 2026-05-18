@@ -610,8 +610,8 @@
         if (myBookings.length === 0) html += `<p>Нет записей</p>`;
         else {
             html += `<table class="data-table"><thead><tr>
-                <th>Клиент</th><th>Телефон</th><th>Email</th><th>Дата/Время</th><th>Менеджер</th><th>Статус</th><th>Комментарий</th><th>Изменить статус</th><th>Действие</th>
-            </table></thead><tbody>`;
+                <th>Клиент</th><th>Телефон</th><th>Email</th><th>Дата/Время</th><th>Менеджер</th><th>Статус</th><th>Комментарий</th><th>Изменить статус</th>
+            </tr></thead><tbody>`;
             myBookings.forEach(b => {
                 html += `<tr id="expert-booking-${b.id}">
                     <td><strong>${b.client_name}</strong></td>
@@ -624,6 +624,7 @@
                     <td>
                         <select id="status-select-${b.id}" onchange="onStatusChange('${b.id}', this.value)">
                             <option value="pending" ${b.call_status === 'pending' ? 'selected' : ''}>⏳ Ожидает</option>
+                            <option value="confirmed" ${b.call_status === 'confirmed' ? 'selected' : ''}>✅ Подтверждён</option>
                             <option value="success" ${b.call_status === 'success' ? 'selected' : ''}>🎉 Созвон успешный</option>
                             <option value="cancelled_by_client" ${b.call_status === 'cancelled_by_client' ? 'selected' : ''}>❌ Отменён клиентом</option>
                             <option value="cancelled_by_expert" ${b.call_status === 'cancelled_by_expert' ? 'selected' : ''}>⚠️ Отменён экспертом</option>
@@ -631,9 +632,8 @@
                             <option value="reschedule_request" ${b.call_status === 'reschedule_request' ? 'selected' : ''}>🔄 Клиент просил перенести</option>
                         </select>
                     </td>
-                    ${b.status === 'pending' ? `<td><button class="success" onclick="confirmBooking('${b.id}')">✅ Подтвердить запись</button></td>` : '<td>—</td>'}
                 </tr>`;
-            });
+            });   
             html += `</tbody></table>`;
         }
         dashboardDiv.innerHTML = html;
