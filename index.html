@@ -611,7 +611,7 @@
         else {
             html += `<table class="data-table"><thead><tr>
                 <th>Клиент</th><th>Телефон</th><th>Email</th><th>Дата/Время</th><th>Менеджер</th><th>Статус</th><th>Комментарий</th><th>Изменить статус</th><th>Действие</th>
-            </tr></thead><tbody>`;
+            </table></thead><tbody>`;
             myBookings.forEach(b => {
                 html += `<tr id="expert-booking-${b.id}">
                     <td><strong>${b.client_name}</strong></td>
@@ -631,9 +631,9 @@
                             <option value="reschedule_request" ${b.call_status === 'reschedule_request' ? 'selected' : ''}>🔄 Клиент просил перенести</option>
                         </select>
                     </td>
-                     ${b.status === 'pending' ? `<td><button class="success" onclick="confirmBooking('${b.id}')">✅ Подтвердить запись</button></td>` : '<td>—</td>'}
-    </table>`;
-            });   
+                    ${b.status === 'pending' ? `<td><button class="success" onclick="confirmBooking('${b.id}')">✅ Подтвердить запись</button></td>` : '<td>—</td>'}
+                </tr>`;
+            });
             html += `</tbody></table>`;
         }
         dashboardDiv.innerHTML = html;
