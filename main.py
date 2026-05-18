@@ -376,6 +376,12 @@ def update_booking_status(update: UpdateBookingStatus):
         "call_status": update.status,
         "call_comment": update.comment or ""
     }).eq("id", update.booking_id).execute()
+
+    # ---- НОВЫЙ БЛОК КОДА ----
+    # Если статус изменился на "confirmed", обновляем и сам слот
+    if update.status == "confirmed":
+        supabase.table("slots").update({"status": "confirmed"}).eq("id", slot_id).execute()
+    # -------------------------
     
     return {"status": update.status, "comment": update.comment}
 
