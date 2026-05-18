@@ -957,12 +957,38 @@ allBookings = sortByDateTime(allBookings, 'date', 'start_time');
             return m;
         });
     }
+
+    // ========== ПОДТВЕРЖДЕНИЕ ЗАПИСИ ЭКСПЕРТОМ ==========
+    window.confirmBooking = async (bookingId) => {
+        console.log("Подтверждение записи:", bookingId);
+        try {
+            const response = await fetch(`${API_URL}/api/bookings/confirm`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking_id: bookingId,
+                    expert_id: currentUser.id
+                })
+            });
+            
+            if (response.ok) {
+                alert("✅ Запись подтверждена!");
+                loadDashboard();
+            } else {
+                const error = await response.json();
+                alert("❌ Ошибка подтверждения: " + (error.detail || "неизвестная ошибка"));
+            }
+        } catch (err) {
+            console.error("Ошибка:", err);
+            alert("❌ Ошибка соединения");
+        }
+    };
     
     // При загрузке проверяем email в поле ввода
     document.getElementById('user-email').addEventListener('input', (e) => {
         checkAdminAccess(e.target.value);
     });
-    
+   
     loadFromStorage();
 </script>
 </body>
