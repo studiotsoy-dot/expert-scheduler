@@ -202,6 +202,34 @@
         .clickable-name:hover {
             text-decoration: underline;
         }
+                /* Футер и логотип разработчика */
+        .footer {
+            margin-top: 2rem;
+            text-align: center;
+            padding: 1.5rem;
+            font-size: 0.8rem;
+            color: #64748b;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .dev-logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: #64748b;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .dev-logo:hover {
+            color: #2dd4bf;
+        }
+        .footer-logo {
+            height: 28px;
+            width: auto;
+            vertical-align: middle;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -991,5 +1019,13 @@ allBookings = sortByDateTime(allBookings, 'date', 'start_time');
    
     loadFromStorage();
 </script>
+ 
+<div class="footer">
+    <a href="https://t.me/StudioTSV" target="_blank" class="dev-logo">
+        <img src="https://sun9-34.userapi.com/s/v1/ig2/46ceWsjXPtKaGR1mb9q8xdOvn4NHYKuPAcPdpfUXAyId9NHnBvv6yKEiDr_C-yuYkGQGKHxzg_FFJN6BX3MHWQ0e.jpg?quality=95&as=32x21,48x32,72x48,108x72,160x107,240x160,360x240,480x320,540x360,640x427,720x480,1080x720,1280x853,1440x960,1536x1024&from=bu&u=AmysnT5oEMhlX31GnqihMwPKsVppZSLhhxcCWYlgEmI&cs=540x0" alt="STUDIO TSOY" class="footer-logo">
+        Разработано STUDIO TSOY
+    </a>
+</div>
+
 </body>
 </html>
