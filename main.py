@@ -344,8 +344,15 @@ def confirm_booking(data: ConfirmBooking):
     if not slot_response.data or slot_response.data[0]["expert_id"] != data.expert_id:
         raise HTTPException(status_code=403, detail="Нет прав")
     
-    supabase.table("bookings").update({"status": "confirmed", "call_status": "confirmed"}).eq("id", data.booking_id).execute()
-    supabase.table("slots").update({"status": "confirmed"}).eq("id", booking_response.data[0]["slot_id"]).execute()
+     # Обновляем статусы
+    supabase.table("bookings").update({
+        "status": "confirmed", 
+        "call_status": "confirmed"
+    }).eq("id", data.booking_id).execute()
+    
+    supabase.table("slots").update({
+        "status": "confirmed"
+    }).eq("id", slot_id).execute()
     
     return {"status": "confirmed"}
 
