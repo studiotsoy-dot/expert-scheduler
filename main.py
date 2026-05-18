@@ -3,7 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
+from functools import lru_cache
 import uuid
 import os
 from supabase import create_client, Client
@@ -29,6 +30,20 @@ else:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
     print("✅ Supabase подключен!")
 
+# ========== КЭШ ==========
+cache = {}
+def cached_query(key, func, ttl=10):
+    now = datetime.now()
+    if key in cache and (now - cache[key]['time']) < timedelta(seconds=ttl):
+        return cache[key]['data']
+    data = func()
+    cache[key] = {'data': data, 'time': now}
+    return data
+
+def clear_cache():
+    cache.clear()
+    print("🟢 Кэш очищен")
+    
 # Статусы созвона
 CALL_STATUSES = [
     "pending", "confirmed", "success", "cancelled_by_client",
@@ -130,13 +145,15 @@ def create_user(user: UserCreate):
     }
     
     response = supabase.table("users").insert(new_user).execute()
+    clear_cache()
     return response.data[0]
 
 @app.get("/api/users")
 def get_users():
     if not supabase: return []
-    response = supabase.table("users").select("*").execute()
-    return response.data
+    def _get():
+        return supabase.table("users").select("*").execute().data
+    return cached_query('users', _get, 10)
 
 @app.put("/api/users")
 def update_user(update: UserUpdate):
@@ -155,6 +172,7 @@ def update_user(update: UserUpdate):
     response = supabase.table("users").update(update_data).eq("id", update.user_id).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
+    clear_cache()
     return response.data[0]
 
 @app.delete("/api/users/{user_id}")
@@ -175,6 +193,7 @@ def delete_user(user_id: str):
         supabase.table("slots").delete().eq("expert_id", user_id).execute()
     
     supabase.table("users").delete().eq("id", user_id).execute()
+    clear_cache()
     return {"status": "deleted"}
 
 # ========== API SLOTS ==========
@@ -194,33 +213,36 @@ def create_slot(slot: SlotCreate):
     }
     
     response = supabase.table("slots").insert(new_slot).execute()
+    clear_cache()
     return response.data[0]
 
 @app.get("/api/slots")
 def get_slots(expert_id: Optional[str] = None):
     if not supabase: return []
-    query = supabase.table("slots").select("*")
-    if expert_id:
-        query = query.eq("expert_id", expert_id)
-    response = query.execute()
-    return response.data
+    def _get():
+        query = supabase.table("slots").select("*")
+        if expert_id:
+            query = query.eq("expert_id", expert_id)
+        return query.execute().data
+    cache_key = f'slots_{expert_id}' if expert_id else 'slots_all'
+    return cached_query(cache_key, _get, 10)
 
 @app.get("/api/slots/free")
 def get_free_slots():
     if not supabase: return []
-    
-    slots_response = supabase.table("slots").select("*").eq("status", "free").execute()
-    slots = slots_response.data
-    
-    result = []
-    for slot in slots:
-        expert_response = supabase.table("users").select("name, portfolio_url").eq("id", slot["expert_id"]).eq("is_active", 1).execute()
-        if expert_response.data:
-            expert = expert_response.data[0]
-            slot["expert_name"] = expert["name"]
-            slot["expert_portfolio"] = expert.get("portfolio_url", "")
-            result.append(slot)
-    return result
+    def _get():
+        slots_response = supabase.table("slots").select("*").eq("status", "free").execute()
+        slots = slots_response.data
+        result = []
+        for slot in slots:
+            expert_response = supabase.table("users").select("name, portfolio_url").eq("id", slot["expert_id"]).eq("is_active", 1).execute()
+            if expert_response.data:
+                expert = expert_response.data[0]
+                slot["expert_name"] = expert["name"]
+                slot["expert_portfolio"] = expert.get("portfolio_url", "")
+                result.append(slot)
+        return result
+    return cached_query('free_slots', _get, 10)
 
 @app.put("/api/slots/{slot_id}")
 def update_slot(slot_id: str, slot: SlotCreate):
@@ -243,6 +265,7 @@ def update_slot(slot_id: str, slot: SlotCreate):
         "end_time": slot.end_time
     }).eq("id", slot_id).execute()
     
+    clear_cache()
     return response.data[0]
 
 @app.delete("/api/slots/{slot_id}")
@@ -261,43 +284,44 @@ def delete_slot(slot_id: str, expert_id: str):
         raise HTTPException(status_code=400, detail="Нельзя удалить занятый слот")
     
     supabase.table("slots").delete().eq("id", slot_id).execute()
+    clear_cache()
     return {"status": "deleted"}
 
 @app.get("/api/slots/admin/all")
 def get_all_slots_with_experts():
     if not supabase: return []
-    
-    slots_response = supabase.table("slots").select("*").execute()
-    slots = slots_response.data
-    
-    result = []
-    for slot in slots:
-        expert_response = supabase.table("users").select("name, email, portfolio_url").eq("id", slot["expert_id"]).execute()
-        if not expert_response.data:
-            continue
-        
-        expert = expert_response.data[0]
-        slot_copy = dict(slot)
-        slot_copy["expert_name"] = expert["name"]
-        slot_copy["expert_email"] = expert["email"]
-        slot_copy["expert_portfolio"] = expert.get("portfolio_url", "")
-        
-        booking_response = supabase.table("bookings").select("*").eq("slot_id", slot["id"]).execute()
-        if booking_response.data:
-            booking = booking_response.data[0]
-            manager_response = supabase.table("users").select("name").eq("id", booking["manager_id"]).execute()
-            slot_copy["booking"] = {
-                "client_name": booking["client_name"],
-                "client_phone": booking["client_phone"],
-                "client_email": booking["client_email"],
-                "status": booking["status"],
-                "call_status": booking.get("call_status", "pending"),
-                "call_comment": booking.get("call_comment", ""),
-                "zoom_link": booking["zoom_link"],
-                "manager_name": manager_response.data[0]["name"] if manager_response.data else "Unknown"
-            }
-        result.append(slot_copy)
-    return result
+    def _get():
+        slots_response = supabase.table("slots").select("*").execute()
+        slots = slots_response.data
+        result = []
+        for slot in slots:
+            expert_response = supabase.table("users").select("name, email, portfolio_url").eq("id", slot["expert_id"]).execute()
+            if not expert_response.data:
+                continue
+            
+            expert = expert_response.data[0]
+            slot_copy = dict(slot)
+            slot_copy["expert_name"] = expert["name"]
+            slot_copy["expert_email"] = expert["email"]
+            slot_copy["expert_portfolio"] = expert.get("portfolio_url", "")
+            
+            booking_response = supabase.table("bookings").select("*").eq("slot_id", slot["id"]).execute()
+            if booking_response.data:
+                booking = booking_response.data[0]
+                manager_response = supabase.table("users").select("name").eq("id", booking["manager_id"]).execute()
+                slot_copy["booking"] = {
+                    "client_name": booking["client_name"],
+                    "client_phone": booking["client_phone"],
+                    "client_email": booking["client_email"],
+                    "status": booking["status"],
+                    "call_status": booking.get("call_status", "pending"),
+                    "call_comment": booking.get("call_comment", ""),
+                    "zoom_link": booking["zoom_link"],
+                    "manager_name": manager_response.data[0]["name"] if manager_response.data else "Unknown"
+                }
+            result.append(slot_copy)
+        return result
+    return cached_query('admin_slots', _get, 10)
 
 # ========== API BOOKINGS ==========
 @app.post("/api/bookings")
@@ -328,7 +352,8 @@ def create_booking(booking: BookingCreate):
     
     supabase.table("bookings").insert(new_booking).execute()
     supabase.table("slots").update({"status": "booked"}).eq("id", booking.slot_id).execute()
-    
+
+    clear_cache()
     return {"id": booking_id, "zoom_link": zoom_link, "status": "pending"}
 
 @app.post("/api/bookings/confirm")
@@ -353,7 +378,8 @@ def confirm_booking(data: ConfirmBooking):
     supabase.table("slots").update({
         "status": "confirmed"
     }).eq("id", slot_id).execute()
-    
+
+    clear_cache()
     return {"status": "confirmed"}
 
 @app.post("/api/bookings/update-status")
@@ -385,7 +411,8 @@ def update_booking_status(update: UpdateBookingStatus):
     if update.status == "confirmed":
         supabase.table("slots").update({"status": "confirmed"}).eq("id", slot_id).execute()
     # -------------------------
-    
+
+    clear_cache()
     return {"status": update.status, "comment": update.comment}
 
 @app.post("/api/bookings/reschedule")
@@ -417,66 +444,70 @@ def reschedule_booking(reschedule: RescheduleBooking):
     }).eq("id", reschedule.booking_id).execute()
     
     supabase.table("slots").update({"status": "free"}).eq("id", old_slot_id).execute()
-    
+
+    clear_cache()
     return {"new_slot_id": new_slot_id, "date": reschedule.new_date, "start_time": reschedule.new_start_time, "end_time": reschedule.new_end_time}
 
 @app.get("/api/bookings")
 def get_bookings(role: str, user_id: str):
     if not supabase: return []
-    
-    if role == "admin":
-        response = supabase.table("bookings").select("*").execute()
-        bookings = response.data
-    elif role == "manager":
-        response = supabase.table("bookings").select("*").eq("manager_id", user_id).execute()
-        bookings = response.data
-    elif role == "expert":
-        slots_response = supabase.table("slots").select("id").eq("expert_id", user_id).execute()
-        slot_ids = [s["id"] for s in slots_response.data]
-        if not slot_ids:
+    def _get():
+        if role == "admin":
+            response = supabase.table("bookings").select("*").execute()
+            bookings = response.data
+        elif role == "manager":
+            response = supabase.table("bookings").select("*").eq("manager_id", user_id).execute()
+            bookings = response.data
+        elif role == "expert":
+            slots_response = supabase.table("slots").select("id").eq("expert_id", user_id).execute()
+            slot_ids = [s["id"] for s in slots_response.data]
+            if not slot_ids:
+                return []
+            response = supabase.table("bookings").select("*").in_("slot_id", slot_ids).execute()
+            bookings = response.data
+        else:
             return []
-        response = supabase.table("bookings").select("*").in_("slot_id", slot_ids).execute()
-        bookings = response.data
-    else:
-        return []
-    
-    result = []
-    for booking in bookings:
-        slot_response = supabase.table("slots").select("*").eq("id", booking["slot_id"]).execute()
-        if not slot_response.data:
-            continue
-        slot = slot_response.data[0]
         
-        expert_response = supabase.table("users").select("name, portfolio_url").eq("id", slot["expert_id"]).execute()
-        expert = expert_response.data[0] if expert_response.data else None
-        
-        manager_response = supabase.table("users").select("name").eq("id", booking["manager_id"]).execute()
-        manager = manager_response.data[0] if manager_response.data else None
-        
-        result.append({
-            "id": booking["id"],
-            "client_name": booking["client_name"],
-            "client_phone": booking["client_phone"],
-            "client_email": booking["client_email"],
-            "status": booking["status"],
-            "call_status": booking.get("call_status", "pending"),
-            "call_comment": booking.get("call_comment", ""),
-            "zoom_link": booking["zoom_link"],
-            "created_at": booking["created_at"],
-            "date": slot["date"],
-            "start_time": slot["start_time"],
-            "end_time": slot["end_time"],
-            "expert_name": expert["name"] if expert else "Unknown",
-            "expert_id": slot["expert_id"],
-            "expert_portfolio": expert.get("portfolio_url", "") if expert else "",
-            "manager_name": manager["name"] if manager else "Unknown"
-        })
-    
-    return result
+        result = []
+        for booking in bookings:
+            slot_response = supabase.table("slots").select("*").eq("id", booking["slot_id"]).execute()
+            if not slot_response.data:
+                continue
+            slot = slot_response.data[0]
+            
+            expert_response = supabase.table("users").select("name, portfolio_url").eq("id", slot["expert_id"]).execute()
+            expert = expert_response.data[0] if expert_response.data else None
+            
+            manager_response = supabase.table("users").select("name").eq("id", booking["manager_id"]).execute()
+            manager = manager_response.data[0] if manager_response.data else None
+            
+            result.append({
+                "id": booking["id"],
+                "client_name": booking["client_name"],
+                "client_phone": booking["client_phone"],
+                "client_email": booking["client_email"],
+                "status": booking["status"],
+                "call_status": booking.get("call_status", "pending"),
+                "call_comment": booking.get("call_comment", ""),
+                "zoom_link": booking["zoom_link"],
+                "created_at": booking["created_at"],
+                "date": slot["date"],
+                "start_time": slot["start_time"],
+                "end_time": slot["end_time"],
+                "expert_name": expert["name"] if expert else "Unknown",
+                "expert_id": slot["expert_id"],
+                "expert_portfolio": expert.get("portfolio_url", "") if expert else "",
+                "manager_name": manager["name"] if manager else "Unknown"
+            })
+        return result
+    cache_key = f'bookings_{role}_{user_id}'
+    return cached_query(cache_key, _get, 10)
 
 @app.get("/api/bookings/statuses")
 def get_statuses():
-    return {"statuses": CALL_STATUSES, "names": STATUS_NAMES}
+    def _get():
+        return {"statuses": CALL_STATUSES, "names": STATUS_NAMES}
+    return cached_query('statuses', _get, 60)
 
 # Статика
 @app.get("/")
