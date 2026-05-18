@@ -367,6 +367,9 @@ def update_booking_status(update: UpdateBookingStatus):
     booking_response = supabase.table("bookings").select("slot_id").eq("id", update.booking_id).execute()
     if not booking_response.data:
         raise HTTPException(status_code=404, detail="Бронирование не найдено")
+
+    # ВОТ ЗДЕСЬ НУЖНО ДОБАВИТЬ ЭТУ СТРОКУ
+    slot_id = booking_response.data[0]["slot_id"]
     
     slot_response = supabase.table("slots").select("expert_id").eq("id", booking_response.data[0]["slot_id"]).execute()
     if not slot_response.data or slot_response.data[0]["expert_id"] != update.expert_id:
